@@ -2,6 +2,9 @@
 # exit on error
 set -o errexit
 
+# Le damos permiso de ejecución al script
+chmod +x build.sh
+
 pip install -r requirements.txt
 
 echo "Creando tablas de la base de datos..."
