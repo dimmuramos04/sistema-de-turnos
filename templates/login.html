@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Iniciar Sesión{% endblock %}
+{% block body_class %}form-body{% endblock %}
+{% block content %}
+<div class="form-container">
+    <header class="main-header-form">
+        <img src="{{ url_for('static', filename='images/logo_uls_blanco.png') }}" alt="Logo ULS" class="logo">
+    </header>
+    <h2>Acceso Personal</h2>
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.username.label }}
+            {{ form.username(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(class='form-control') }}
+        </div>
+        {{ form.submit(class='btn-submit') }}
+    </form>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    </div>
+{% endblock %}

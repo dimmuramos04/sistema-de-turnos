@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Editar Servicio{% endblock %}
+{% block body_class %}form-body{% endblock %}
+{% block content %}
+<div class="form-container">
+    <header class="main-header-form">
+        <img src="{{ url_for('static', filename='images/logo_uls_blanco.png') }}" alt="Logo ULS" class="logo">
+    </header>
+    <h2>Editando Servicio: {{ servicio.nombre_modulo }}</h2>
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.nombre_modulo.label }}
+            {{ form.nombre_modulo(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.prefijo_ticket.label }}
+            {{ form.prefijo_ticket(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.color_hex.label }}
+            {{ form.color_hex(class='form-control') }}
+        </div>
+        {{ form.submit(class='btn-submit') }}
+    </form>
+    <a href="{{ url_for('gestionar_servicios') }}" class="link-volver">Volver a la lista</a>
+</div>
+{% endblock %}

@@ -1,0 +1,287 @@
+/* ==========================================================================
+   1. GLOBALES Y VARIABLES
+   ========================================================================== */
+:root {
+    --azul-uls: #003082; --rojo-uls: #CF142B; --blanco-uls: #FFFFFF;
+    --negro-texto: #333333; --gris-claro: #f0f2f5;
+}
+body {
+    font-family: 'Museo Sans', sans-serif; margin: 0; color: var(--negro-texto);
+    height: 100vh; display: flex; flex-direction: column;
+}
+/* ==========================================================================
+   2. ESTILOS POR PÁGINA
+   ========================================================================== */
+/* -------------------- A. Pantalla Pública (/) -------------------- */
+.public-display-body { background-color: var(--azul-uls); }
+.main-header {
+    background-color: var(--azul-uls); padding: 0.5rem 2rem; display: flex;
+    justify-content: space-between; align-items: center;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+.logo { height: 50px; }
+.kiosk-container {
+    flex-grow: 1; display: flex; flex-direction: column; padding: 1rem; gap: 1rem;
+}
+.call-panel, .history {
+    background-color: var(--blanco-uls); border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column;
+}
+.call-panel { flex-grow: 1; }
+.call-header {
+    font-size: 2.5rem; font-weight: 700; padding: 0.75rem; text-align: center;
+    background-color: var(--gris-claro); border-bottom: 1px solid #ddd;
+    border-radius: 8px 8px 0 0; color: var(--azul-uls);
+}
+.call-body {
+    flex-grow: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+}
+.ticket-number { font-size: 10rem; font-weight: 900; line-height: 1; color: var(--ticket-color); }
+.module-number { font-size: 6rem; font-weight: 700; text-align: center; color: var(--ticket-color); }
+.module-number::before {
+    content: "Módulo"; display: block; font-size: 2rem;
+    font-weight: 500; color: var(--negro-texto);
+}
+.history { min-height: 200px; max-height: 40vh; }
+.history-header {
+    font-size: 1.2rem; padding: 0.5rem; text-align: center;
+    background-color: #444; color: var(--blanco-uls); border-radius: 8px 8px 0 0;
+}
+.history-list { list-style-type: none; padding: 0; margin: 0; overflow-y: auto; }
+.history-list li {
+    display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center;
+    padding: 0.75rem 1.5rem; font-size: 1.5rem; border-bottom: 1px solid #eee;
+}
+.history-list li:last-child { border-bottom: none; }
+.history-ticket { font-weight: 700; color: var(--ticket-color); }
+.history-service { text-align: center; }
+.history-module { text-align: right; }
+.no-history span { grid-column: 1 / -1; text-align: center; color: #888; }
+#start-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--azul-uls); color: var(--blanco-uls);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000; cursor: pointer;
+}
+.start-box {
+    text-align: center; border: 3px solid var(--blanco-uls);
+    padding: 2rem 4rem; border-radius: 10px;
+}
+.start-box h1 { font-size: 3rem; margin-top: 0; }
+.start-box p { font-size: 1.5rem; margin-bottom: 0; }
+
+/*Definimos los pasos de la animación "pulse" */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 48, 130, 0.7);
+  }
+  70% {
+    transform: scale(1.02); /* Se agranda un 3% */
+    box-shadow: 0 0 10px 30px rgba(0, 48, 130, 0); /* El resplandor se expande y desaparece */
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(0, 48, 130, 0);
+  }
+}
+
+/* 2. Creamos la clase que activará la animación */
+.call-panel.is-calling {
+  /* Le decimos que use la animación 'pulse' durante 1.2 segundos */
+    animation: pulse 1.2s ease-out;
+}
+
+/* -------------------- B. Formularios -------------------- */
+.form-body { background-color: var(--gris-claro); }
+.form-container {
+    max-width: 600px; margin: 2rem auto; padding: 2rem;
+    background: var(--blanco-uls); border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+.form-container h2 { text-align: center; color: var(--azul-uls); margin-top: 0; }
+.main-header-form {
+    background-color: var(--azul-uls); padding: 1rem; text-align: center;
+    border-radius: 8px 8px 0 0; margin: -2rem -2rem 1.5rem -2rem;
+}
+.header-content { display: flex; justify-content: space-between; align-items: center; }
+.header-spacer { width: 110px; }
+.form-group { margin-bottom: 1.5rem; }
+.form-group label {
+    display: block; margin-bottom: 0.5rem; font-weight: 500; color: #555;
+}
+.form-group input, .form-group select {
+    width: 100%; padding: 0.75rem; border: 1px solid #ccc;
+    border-radius: 4px; font-size: 1rem; box-sizing: border-box;
+}
+.link-volver {
+    display: block; text-align: center; margin-top: 1.5rem;
+    color: var(--azul-uls); text-decoration: none; font-weight: 500;
+}
+/* -------------------- C. Panel del Staff (/panel) -------------------- */
+.panel-container {
+    max-width: 1200px; margin: 2rem auto; background: var(--blanco-uls);
+    border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); overflow: hidden;
+    display: flex; flex-direction: column;
+}
+.panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.5rem; background-color: #444; color: var(--blanco-uls);
+}
+.panel-header h3 { margin: 0; }
+.panel-main { display: flex; }
+.call-section, .queue-section { padding: 1.5rem; }
+.call-section { flex: 1; text-align: center; border-right: 1px solid var(--gris-claro); }
+.call-section h4 { margin-top: 0; }
+.queue-section { flex: 1; }
+.waiting-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+.waiting-list li {
+    display: flex; justify-content: space-between; padding: 0.75rem;
+    border-bottom: 1px solid #eee;
+}
+.waiting-list li:last-child { border-bottom: none; }
+.ticket-name { font-weight: 700; }
+.no-tickets { color: #888; text-align: center; }
+.ticket-atendido {
+    font-size: 3rem; color: var(--azul-uls); margin: 1rem 0; font-weight: 700;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem; /* Espacio entre los botones */
+    justify-content: center;
+}
+
+/* Estilo para el nuevo botón "Volver a Llamar" */
+.btn-rellamar {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    background-color: #ffc107; /* Amarillo */
+    color: var(--negro-texto);
+    border: none;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.btn-rellamar:hover {
+    background-color: #e0a800;
+}
+
+/* Ajustamos el tamaño de los botones para que quepan bien */
+.btn-finalizar {
+    font-size: 1.2rem;
+    padding: 1rem;
+}
+
+/* -------------------- D. Panel de Administración (/admin) -------------------- */
+.admin-body { padding: 0; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+.admin-nav { display: flex; background-color: #e9ecef; border-bottom: 1px solid #ddd; }
+.nav-item {
+    padding: 1rem 1.5rem; text-decoration: none; color: #495057; font-weight: 500;
+}
+.nav-item.active, .nav-item:hover { background-color: var(--blanco-uls); color: var(--azul-uls); }
+.admin-content { padding: 1.5rem; flex-grow: 1; overflow-y: auto; }
+.toolbar { text-align: right; margin-bottom: 1.5rem; }
+.stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem; margin-bottom: 1.5rem;
+}
+.stat-card {
+    background-color: var(--blanco-uls); padding: 1.5rem; border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--azul-uls);
+}
+.stat-card h3 {
+    margin: 0 0 0.5rem 0; font-size: 1rem; color: #555; font-weight: 500;
+}
+.stat-card p { margin: 0; font-size: 2.5rem; font-weight: 700; color: var(--negro-texto); }
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.chart-container {
+    background-color: var(--blanco-uls);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    position: relative;
+    height: 350px; /* Le damos una altura fija para que el canvas pueda dibujarse */
+}
+.user-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.user-table th, .user-table td { border: 1px solid #ddd; padding: 0.75rem; text-align: left; }
+.user-table th { background-color: var(--gris-claro); font-weight: 700; }
+.user-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+.color-swatch {
+    display: inline-block; width: 15px; height: 15px; border: 1px solid #ccc;
+    vertical-align: middle; margin-right: 5px; background-color: var(--service-color);
+}
+/* ==========================================================================
+   3. COMPONENTES REUTILIZABLES
+   ========================================================================== */
+/* -------------------- A. Botones -------------------- */
+.btn-submit {
+    width: 100%; padding: 1rem; background-color: var(--rojo-uls); color: var(--blanco-uls);
+    border: none; border-radius: 4px; font-size: 1.2rem; font-weight: 700; cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-submit:hover { background-color: #a81022; }
+.btn-llamar {
+    width: 100%; padding: 1.5rem; font-size: 1.5rem; font-weight: 700; cursor: pointer;
+    background-color: #28a745; color: white; border: none; border-radius: 8px;
+    transition: background-color 0.2s;
+}
+.btn-llamar:hover { background-color: #218838; }
+.btn-finalizar {
+    width: 100%; padding: 1.5rem; font-size: 1.5rem; font-weight: 700; cursor: pointer;
+    background-color: var(--azul-uls); color: white; border: none; border-radius: 8px;
+    transition: background-color 0.2s;
+}
+.btn-finalizar:hover { background-color: #001f54; }
+.btn-logout {
+    background-color: var(--rojo-uls); color: var(--blanco-uls); padding: 0.5rem 1rem;
+    border-radius: 4px; text-decoration: none; font-weight: 500;
+    width: 110px; text-align: center;
+}
+.btn-logout-fixed {
+    position: fixed; top: 15px; left: 15px; z-index: 1000;
+    background-color: var(--blanco-uls); color: var(--azul-uls); padding: 0.5rem 1rem;
+    border-radius: 4px; text-decoration: none; font-weight: 700;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #ddd;
+}
+.btn-add {
+    background-color: var(--azul-uls); color: var(--blanco-uls); padding: 0.75rem 1.5rem;
+    border-radius: 5px; text-decoration: none; font-weight: 500;
+}
+.btn-action {
+    padding: 0.3rem 0.6rem; border-radius: 4px; text-decoration: none;
+    color: var(--blanco-uls); margin-right: 5px; display: inline-block;
+    border: none; font-size: 0.8rem; cursor: pointer;
+}
+.btn-action.edit { background-color: #ffc107; }
+.btn-action.delete { background-color: #dc3545; }
+.btn-secondary {
+    background-color: #6c757d; color: var(--blanco-uls); padding: 0.75rem 1.5rem;
+    border-radius: 5px; text-decoration: none; font-weight: 500; display: inline-block;
+}
+/* -------------------- B. Mensajes Flash -------------------- */
+.flash-message {
+    padding: 1rem; margin-top: 1.5rem; border-radius: 4px; text-align: center;
+    font-size: 1.2rem; font-weight: 500;
+}
+.flash-message.success {
+    background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+}
+.flash-message.error {
+    background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+}
+.flash-message-panel {
+    padding: 1rem; margin: 1rem 1.5rem; border-radius: 4px;
+    text-align: center; font-weight: 500;
+}
+.flash-message-panel.info {
+    background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;
+}

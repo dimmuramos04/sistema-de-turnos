@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Admin{% endblock %}
+{% block body_class %}form-body{% endblock %}
+{% block content %}
+<div class="panel-container">
+    <div class="panel-header">
+        <h3>Panel de Administración</h3>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Cerrar Sesión</a>
+    </div>
+    <div class="admin-body">
+        <div class="admin-nav">
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item active">Dashboard</a>
+            <a href="{{ url_for('gestionar_usuarios') }}" class="nav-item">Gestión de Usuarios</a>
+            <a href="{{ url_for('gestionar_servicios') }}" class="nav-item">Gestión de Servicios</a>
+        </div>
+        <div class="admin-content">
+            <div class="toolbar">
+                <a href="{{ url_for('descargar_reporte_tickets') }}" class="btn-secondary">Descargar Reporte (CSV)</a>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Tickets Hoy</h3>
+                    <p>{{ tickets_hoy }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>En Espera</h3>
+                    <p>{{ tickets_en_espera }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>En Atención</h3>
+                    <p>{{ tickets_en_atencion }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Atendidos Hoy</h3>
+                    <p>{{ tickets_finalizados_hoy }}</p>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <canvas id="ticketsPorServicioChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="flujoPorHoraChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- GRÁFICO DE DONA ---
+        try {
+            const chartDataJSON_Dona = '{{ chart_data_dona|tojson|safe }}';
+            const chartDataFromFlask_Dona = JSON.parse(chartDataJSON_Dona);
+            const labels_dona = chartDataFromFlask_Dona.map(item => item[0]);
+            const colors_dona = chartDataFromFlask_Dona.map(item => item[1]);
+            const data_dona = chartDataFromFlask_Dona.map(item => item[2]);
+            const ctx_dona = document.getElementById('ticketsPorServicioChart').getContext('2d');
+            new Chart(ctx_dona, {
+                type: 'doughnut',
+                data: {
+                    labels: labels_dona,
+                    datasets: [{ label: 'Tickets por Servicio', data: data_dona, backgroundColor: colors_dona, borderColor: '#fff', borderWidth: 2 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Distribución de Tickets por Servicio (Histórico)' } } }
+            });
+        } catch (e) {
+            console.error("Error al crear gráfico de Dona:", e);
+        }
+
+        // --- GRÁFICO DE LÍNEAS (VERSIÓN SIMPLIFICADA PARA DEPURACIÓN) ---
+        try {
+            const dataLineasJSON = '{{ chart_data_lineas|tojson|safe }}';
+            const dataLineas = JSON.parse(dataLineasJSON);
+
+            const labelsLineas = Object.keys(dataLineas).sort();
+            const dataLineasSorted = labelsLineas.map(key => dataLineas[key]);
+
+            const ctxLine = document.getElementById('flujoPorHoraChart').getContext('2d');
+            new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: labelsLineas,
+                    datasets: [{
+                        label: 'Tickets por Hora (Hoy)',
+                        data: dataLineasSorted,
+                        borderColor: 'rgba(0, 48, 130, 1)',
+                        backgroundColor: 'rgba(0, 48, 130, 0.1)', /* Color de relleno sugerido */
+                        borderWidth: 2,
+                        fill: true, /* Rellena el área bajo la línea */
+                        tension: 0.1 /* Suaviza la línea */
+                    }]
+                },
+                /* --- AÑADE ESTE BLOQUE DE OPCIONES --- */
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // ¡Esta es la opción clave!
+                    plugins: {
+                        legend: {
+                            display: false // Oculta la leyenda para un look más limpio si solo hay una línea
+                        },
+                        title: {
+                            display: true,
+                            text: 'Flujo de Tickets por Hora (Hoy)'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error("Error al crear gráfico de Líneas:", e);
+        }
+    });
+</script>
+{% endblock %}

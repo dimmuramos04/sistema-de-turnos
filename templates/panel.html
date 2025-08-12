@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Atención{% endblock %}
+
+{% block body_class %}form-body{% endblock %}
+
+{% block content %}
+<div class="panel-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message-panel {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div class="panel-header">
+        <h3>Bienvenido, {{ current_user.nombre_funcionario }}</h3>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Cerrar Sesión</a>
+    </div>
+
+    <div class="panel-main">
+        <div class="call-section">
+            {% if ticket_en_atencion %}
+                <h4>Atendiendo a:</h4>
+                <h2 class="ticket-atendido">{{ ticket_en_atencion.numero_ticket }}</h2>
+        
+                <div class="action-buttons">
+                    <form action="{{ url_for('rellamar_ticket') }}" method="post">
+                        {{ form.hidden_tag() }}
+                        <input type="hidden" name="ticket_id" value="{{ ticket_en_atencion.id }}">
+                        <button type="submit" class="btn-rellamar">Volver a Llamar</button>
+                    </form>
+
+                    <form action="{{ url_for('finalizar_atencion') }}" method="post">
+                        {{ form.hidden_tag() }}
+                        <input type="hidden" name="ticket_id" value="{{ ticket_en_atencion.id }}">
+                        <button type="submit" class="btn-finalizar">Finalizar Atención</button>
+                    </form>
+                </div>
+
+            {% else %}
+                <h4>Llamar al siguiente turno para:</h4>
+                <h2>{{ current_user.modulo_asignado }}</h2>
+                <form action="{{ url_for('llamar_siguiente') }}" method="post">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="btn-llamar">Llamar Siguiente</button>
+                </form>
+            {% endif %}
+        </div>
+
+        <div class="queue-section">
+            <h4>Personas en espera:</h4>
+            <ul class="waiting-list">
+                {% for ticket in tickets_en_espera %}
+                <li>
+                    <span class="ticket-name">{{ ticket.numero_ticket }}</span>
+                    <span class="ticket-time">{{ ticket.hora_registro.strftime('%H:%M:%S') }}</span>
+                </li>
+                {% else %}
+                <li class="no-tickets">No hay nadie en espera.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obtener el nombre del módulo asignado al staff desde el contexto de Jinja
+        var moduloAsignado = "{{ current_user.modulo_asignado }}";
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        // Unirse a la sala del módulo correspondiente
+        socket.on('connect', function() {
+            socket.emit('join', {room: moduloAsignado});
+            console.log('Unido a la sala del módulo:', moduloAsignado);
+        });
+
+        // Escuchar el evento de nuevo ticket registrado para este módulo
+        socket.on('nuevo_ticket_registrado', function(data) {
+            console.log('Nuevo ticket recibido para este módulo:', data);
+            // Crear el nuevo elemento de la lista
+            var ul = document.querySelector('.waiting-list');
+            // Si existe el mensaje de "No hay nadie en espera", lo eliminamos
+            var noTickets = ul.querySelector('.no-tickets');
+            if (noTickets) {
+                ul.removeChild(noTickets);
+            }
+            // Crear el nuevo ticket
+            var li = document.createElement('li');
+            var spanName = document.createElement('span');
+            spanName.className = 'ticket-name';
+            spanName.textContent = data.numero_ticket;
+            var spanTime = document.createElement('span');
+            spanTime.className = 'ticket-time';
+            spanTime.textContent = data.hora_registro;
+            li.appendChild(spanName);
+            li.appendChild(spanTime);
+            ul.appendChild(li);
+        });
+    });
+</script>
+{% endblock %}

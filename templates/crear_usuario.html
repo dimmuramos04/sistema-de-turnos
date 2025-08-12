@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Crear Nuevo Usuario{% endblock %}
+{% block body_class %}form-body{% endblock %}
+{% block content %}
+<div class="form-container">
+    <header class="main-header-form">
+        <img src="{{ url_for('static', filename='images/logo_uls_blanco.png') }}" alt="Logo ULS" class="logo">
+    </header>
+    <h2>Crear Nuevo Usuario</h2>
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.username.label }}
+            {{ form.username(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.rol.label }}
+            {{ form.rol(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.modulo_asignado.label }}
+            {{ form.modulo_asignado(class='form-control') }}
+        </div>
+        <div class="form-group">
+            {{ form.numero_meson.label }}
+            {{ form.numero_meson(class='form-control') }}
+        </div>
+        {{ form.submit(class='btn-submit') }}
+    </form>
+    <a href="{{ url_for('gestionar_usuarios') }}" class="link-volver">Volver a la lista</a>
+</div>
+{% endblock %}
