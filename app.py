@@ -15,6 +15,7 @@ from functools import wraps
 from datetime import datetime, date
 from flask_socketio import SocketIO, join_room
 from flask import Response
+from flask_migrate import Migrate
 import sentry_sdk
 from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler
@@ -63,6 +64,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializa el objeto de la base de datos
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # --- CONFIGURACIÓN DE FLASK-LOGIN ---
 login_manager = LoginManager()
@@ -707,7 +709,3 @@ def logout():
     session.clear()
     flash('Has cerrado sesión exitosamente.', 'success')
     return redirect(url_for('login'))
-
-# Esto permite ejecutar la aplicación directamente
-if __name__ == '__main__':
-    socketio.run(app, debug=True)
