@@ -2,9 +2,13 @@
 # exit on error
 set -o errexit
 
+echo "Instalando dependencias..."
 pip install -r requirements.txt
 
 echo "Aplicando migraciones de la base de datos..."
 flask db upgrade
-echo "Migraciones aplicadas."
-echo "Build finalizado."
+
+echo "Poblando la base de datos con datos iniciales..."
+flask seed
+
+echo "Build finalizado correctamente."
