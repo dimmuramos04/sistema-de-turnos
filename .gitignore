@@ -10,3 +10,6 @@ __pycache__/
 
 # Base de datos de desarrollo SQLite
 instance/
+
+# Archivos de registro
+logs/
