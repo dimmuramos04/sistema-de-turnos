@@ -5,10 +5,15 @@ set -o errexit
 # Instalar dependencias
 pip install -r requirements.txt
 
-# Inicializar la base de datos
+# Asegurarse de que no haya migraciones pendientes
+python -m flask db stamp head
+python -m flask db migrate
 python -m flask db upgrade
 
-# Crear tablas y poblar datos iniciales
+# Crear tablas si no existen
+python -c "from app import app, db; app.app_context().push(); db.create_all()"
+
+# Poblar datos iniciales
 python -m flask seed
 
 # Iniciar la aplicación
