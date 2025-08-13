@@ -55,7 +55,14 @@ csrf = CSRFProtect(app)
 
 # --- CONFIGURACIÓN DE LA BASE DE DATOS ---
 # Le decimos a Flask dónde se guardará nuestra base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+# Para desarrollo local usamos SQLite, para producción PostgreSQL
+if os.environ.get('FLASK_ENV') == 'production':
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+else:
+    # SQLite para desarrollo local
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "database.db")}'
+
 # Desactiva una función de seguimiento de SQLAlchemy que no necesitamos
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
