@@ -5,9 +5,15 @@ set -o errexit
 # Instalar dependencias
 pip install -r requirements.txt
 
+# Crear directorios de migraciones
+mkdir -p migrations/versions
+
+# Inicializar migraciones si no existe
+python -m flask db init || true
+
 # Asegurarse de que no haya migraciones pendientes
-python -m flask db stamp head
-python -m flask db migrate
+python -m flask db stamp head || true
+python -m flask db migrate || true
 python -m flask db upgrade
 
 # Crear tablas si no existen
