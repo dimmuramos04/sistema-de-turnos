@@ -2,15 +2,14 @@
 # exit on error
 set -o errexit
 
-echo "Instalando dependencias..."
+# Instalar dependencias
 pip install -r requirements.txt
 
-echo "Forzando reinicio de migraciones..."
-flask db downgrade base
-echo "Aplicando migraciones de la base de datos..."
-flask db upgrade
+# Inicializar la base de datos
+python -m flask db upgrade
 
-echo "Poblando la base de datos con datos iniciales..."
-flask seed
+# Crear tablas y poblar datos iniciales
+python -m flask seed
 
-echo "Build finalizado correctamente."
+# Iniciar la aplicación
+exec gunicorn --bind 0.0.0.0:$PORT app:app
