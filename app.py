@@ -687,28 +687,6 @@ def create_app():
         flash('Has cerrado sesión exitosamente.', 'success')
         return redirect(url_for('login'))
 
-    # --- SEEDING DE DATOS INICIALES ---    
-    # --- SECCIÓN MODIFICADA ---
-    # Crear un usuario admin si no existe ninguno, usando variables de entorno
-    if not Usuario.query.filter_by(rol='admin').first():
-        # Lee las variables de entorno. Usa 'admin' como valor por defecto si no las encuentra.
-        admin_user = os.getenv('ADMIN_USERNAME', 'admin')
-        admin_pass = os.getenv('ADMIN_PASSWORD', 'admin')
-
-        if admin_pass == 'admin':
-             print("ADVERTENCIA: Usando contraseña de administrador por defecto. Defina ADMIN_PASSWORD en producción.")
-
-        admin = Usuario(
-            nombre_funcionario=admin_user,
-            rol='admin'
-        )
-        admin.password = admin_pass
-        db.session.add(admin)
-        print(f"Usuario administrador '{admin_user}' creado.")
-
-    db.session.commit()
-    print("Seeding de datos completado.")
-
     # --- COMANDOS DE LA CLI ---
     # Movemos el comando de seed aquí para que esté asociado a la app.
     @app.cli.command("seed")
