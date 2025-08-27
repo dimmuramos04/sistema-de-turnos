@@ -1,11 +1,9 @@
-# Este es el contenido de run.py
+# run.py
+from app import create_app
 
-import eventlet
-eventlet.monkey_patch()
-
-# Importamos la app y socketio desde nuestro archivo app
-from app import app, socketio
+# Obtenemos la app y socketio de nuestra fábrica.
+app, socketio = create_app()
 
 if __name__ == '__main__':
-    # Usamos socketio.run para iniciar el servidor
+    # Usamos socketio.run, que ya tiene el monkey_patching manejado por app.py
     socketio.run(app, debug=True)
