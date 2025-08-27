@@ -17,13 +17,13 @@ from flask_socketio import SocketIO, join_room
 from flask import Response
 from flask_migrate import Migrate
 import sentry_sdk
-from dotenv import load_dotenv
 from logging.handlers import RotatingFileHandler
 import logging
 import os
 import io
 import csv
 import pytz
+from dotenv import load_dotenv
 
 # Carga las variables de entorno desde el archivo .env
 load_dotenv()
@@ -35,7 +35,6 @@ sentry_sdk.init(
     traces_sample_rate=1.0
 )
 # -----------------------------
-
 # Inicializa la aplicación
 app = Flask(__name__)
 
