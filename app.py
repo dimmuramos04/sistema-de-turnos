@@ -687,24 +687,7 @@ def create_app():
         flash('Has cerrado sesión exitosamente.', 'success')
         return redirect(url_for('login'))
 
-    def seed_data():
-        """Puebla la base de datos con datos iniciales si no existen."""
-        servicios_iniciales = [
-            {'nombre': 'Matrícula', 'prefijo': 'M', 'color': '#000000'},
-            {'nombre': 'Bienestar Estudiantil', 'prefijo': 'B', 'color': '#CF142B'}
-        ]
-    
-        for s_data in servicios_iniciales:
-            servicio_existente = Servicio.query.filter_by(nombre_modulo=s_data['nombre']).first()
-            if not servicio_existente:
-                nuevo_servicio = Servicio(
-                    nombre_modulo=s_data['nombre'],
-                    prefijo_ticket=s_data['prefijo'],
-                    color_hex=s_data['color']
-                )
-                db.session.add(nuevo_servicio)
-                print(f"Servicio '{s_data['nombre']}' creado.")
-    
+    # --- SEEDING DE DATOS INICIALES ---    
     # --- SECCIÓN MODIFICADA ---
     # Crear un usuario admin si no existe ninguno, usando variables de entorno
     if not Usuario.query.filter_by(rol='admin').first():
