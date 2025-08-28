@@ -133,7 +133,7 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     # Pasamos el async_mode='eventlet' para producción.
-    socketio.init_app(app, cors_allowed_origins="*", async_mode='eventlet')
+    socketio.init_app(app, async_mode='threading', cors_allowed_origins="*")
 
 
     # --- CONFIGURACIÓN DE SENTRY Y LOGGING ---
