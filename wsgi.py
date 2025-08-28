@@ -14,6 +14,6 @@ except ImportError:
     print("psycogreen not found, database connections might block.")
 
 # 3. Ahora, con el entorno completamente parcheado, creamos la app.
-from app import create_app
+from app import create_app, socketio
 
-app, socketio = create_app()
+app = create_app()

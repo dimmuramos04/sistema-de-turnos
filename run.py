@@ -2,7 +2,7 @@
 import eventlet
 eventlet.monkey_patch()
 
-# Importamos la fábrica Y el objeto socketio global
+# Importamos la fábrica Y el objeto socketio por separado
 from app import create_app, socketio
 
 # Creamos la app
