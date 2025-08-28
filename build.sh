@@ -5,10 +5,6 @@ set -o errexit
 echo "Instalando dependencias..."
 pip install -r requirements.txt
 
-# LÍNEA CLAVE: Le decimos a los comandos 'flask' que usen la fábrica de
-# la aplicación directamente, ignorando el wsgi.py con los parches.
-export FLASK_APP="app:create_app"
-
 # Forzar un reinicio completo de la base de datos para limpiar el estado anterior
 echo "Limpiando y reiniciando la base de datos..."
 flask db downgrade base
