@@ -719,4 +719,4 @@ def create_app():
         if room:
             join_room(room)
 
-    return app, socketio
+    return app
