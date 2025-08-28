@@ -1,4 +1,7 @@
 # run.py
+import eventlet
+eventlet.monkey_patch()
+
 from app import create_app
 
 # Obtenemos la app y socketio de nuestra fábrica.
