@@ -1,10 +1,6 @@
 #app.py
 
 import os
-import eventlet
-# MUY IMPORTANTE: Hacemos el monkey_patch aquí, antes de CUALQUIER OTRA IMPORTACIÓN DE FLASK.
-# Pero como ahora todo está dentro de una función, no causará problemas con los comandos de la CLI.
-eventlet.monkey_patch()
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
 from flask_sqlalchemy import SQLAlchemy
