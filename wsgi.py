@@ -2,7 +2,7 @@
 import eventlet
 
 # 1. Aplicamos el parche general ANTES que cualquier otra cosa.
-eventlet.monkey_patch()
+eventlet.monkey_patch(socket=True, time=True)
 
 # 2. Aplicamos el parche específico para la base de datos.
 #    Esta es la pieza clave que resuelve el error del "lock".

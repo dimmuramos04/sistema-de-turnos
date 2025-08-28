@@ -1,6 +1,6 @@
 # run.py
 import eventlet
-eventlet.monkey_patch()
+eventlet.monkey_patch(socket=True, time=True)
 
 # Importamos la fábrica Y el objeto socketio por separado
 from app import create_app, socketio
