@@ -70,7 +70,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Obtener el nombre del módulo asignado al staff desde el contexto de Jinja
         var moduloAsignado = "{{ current_user.modulo_asignado }}";
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var socket = io();
 
         // Unirse a la sala del módulo correspondiente
         socket.on('connect', function() {

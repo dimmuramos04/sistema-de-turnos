@@ -8,6 +8,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import func
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Optional
@@ -115,6 +116,9 @@ class CrearServicioForm(FlaskForm):
 def create_app():
     load_dotenv()
     app = Flask(__name__)
+    
+    # Aplicamos el proxy fix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
     # --- CONFIGURACIÓN DE LA APLICACIÓN ---
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')

@@ -83,7 +83,7 @@
         }
 
         // --- 3. LÓGICA DE CONEXIÓN EN TIEMPO REAL ---
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var socket = io();
 
         // Se ejecuta cuando la conexión con el servidor es exitosa.
         socket.on('connect', function() {
