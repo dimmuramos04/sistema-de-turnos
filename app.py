@@ -116,7 +116,7 @@ class CrearServicioForm(FlaskForm):
 def create_app():
     load_dotenv()
     app = Flask(__name__)
-    
+
     # Aplicamos el proxy fix
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
@@ -137,7 +137,7 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     # Pasamos el async_mode='eventlet' para producción.
-    socketio.init_app(app, async_mode='threading', cors_allowed_origins="*")
+    socketio.init_app(app, async_mode='eventlet', cors_allowed_origins="*")
 
 
     # --- CONFIGURACIÓN DE SENTRY Y LOGGING ---
