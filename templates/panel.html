@@ -13,11 +13,7 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-    <div class="panel-header">
-        <h3>Bienvenido, {{ current_user.nombre_funcionario }}</h3>
-        <a href="{{ url_for('logout') }}" class="btn-logout">Cerrar Sesión</a>
-    </div>
-
+    {% include '_logged_in_header.html' %}
     <div class="panel-main">
         <div class="call-section">
             {% if ticket_en_atencion %}

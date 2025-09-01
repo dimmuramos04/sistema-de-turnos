@@ -2,8 +2,7 @@
 {% block title %}Registro de Ticket{% endblock %}
 {% block body_class %}form-body{% endblock %}
 {% block content %}
-
-<a href="{{ url_for('logout') }}" class="btn-logout-fixed">Cerrar Sesión</a>
+{% include '_logged_in_header.html' %}
 
 <div class="form-container">
     <header class="main-header-form">

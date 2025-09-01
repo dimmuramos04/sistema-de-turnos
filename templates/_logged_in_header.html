@@ -1,0 +1,11 @@
+<div class="panel-header">
+    <div class="header-welcome">
+        <h3>Bienvenido, {{ current_user.nombre_funcionario }}</h3>
+        <p>Rol: {{ current_user.rol.title() }}</p>
+    </div>
+    
+    <div class="header-actions">
+        <a href="{{ url_for('cambiar_contrasena') }}" class="btn btn-secondary">Cambiar Contraseña</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-logout">Cerrar Sesión</a>
+    </div>
+</div>

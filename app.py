@@ -111,6 +111,12 @@ class CrearServicioForm(FlaskForm):
     color_hex = StringField('Color (código hexadecimal, ej: #000000)', validators=[DataRequired()])
     submit = SubmitField('Crear Servicio')
 
+class ChangePasswordForm(FlaskForm):
+    old_password = PasswordField('Contraseña Actual', validators=[DataRequired()])
+    new_password = PasswordField('Nueva Contraseña', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirmar Nueva Contraseña', validators=[DataRequired()])
+    submit = SubmitField('Cambiar Contraseña')
+
 
 # --- FUNCIÓN DE FÁBRICA DE LA APLICACIÓN ---
 def create_app():
@@ -686,6 +692,38 @@ def create_app():
         session.clear()
         flash('Has cerrado sesión exitosamente.', 'success')
         return redirect(url_for('login'))
+
+    @app.route('/cambiar-contrasena', methods=['GET', 'POST'])
+    @login_required
+    def cambiar_contrasena():
+        form = ChangePasswordForm()
+        if form.validate_on_submit():
+            # 1. Verificar que la contraseña actual sea correcta
+            if not current_user.check_password(form.old_password.data):
+                flash('La contraseña actual es incorrecta.', 'error')
+                return redirect(url_for('cambiar_contrasena'))
+        
+            # 2. Verificar que la nueva contraseña y la confirmación coincidan
+            if form.new_password.data != form.confirm_password.data:
+                flash('La nueva contraseña y la confirmación no coinciden.', 'error')
+                return redirect(url_for('cambiar_contrasena'))
+            
+            # 3. Actualizar la contraseña
+            current_user.password = form.new_password.data
+            db.session.commit()
+        
+            flash('¡Tu contraseña ha sido actualizada exitosamente!', 'success')
+            # Redirigimos al panel correspondiente según el rol del usuario
+            if current_user.rol == 'staff':
+                return redirect(url_for('panel'))
+            elif current_user.rol == 'registrador':
+                return redirect(url_for('registro'))
+            elif current_user.rol == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('pantalla_publica'))
+
+        return render_template('cambiar_contrasena.html', form=form)
 
     # --- COMANDOS DE LA CLI ---
     # Movemos el comando de seed aquí para que esté asociado a la app.

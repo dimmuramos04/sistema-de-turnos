@@ -125,11 +125,73 @@ body {
     border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); overflow: hidden;
     display: flex; flex-direction: column;
 }
+
 .panel-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 1rem 1.5rem; background-color: #444; color: var(--blanco-uls);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem 1.5rem;
+    background-color: #444;
+    color: var(--blanco-uls);
+    border-radius: 8px 8px 0 0; /* Añadimos bordes redondeados arriba */
 }
-.panel-header h3 { margin: 0; }
+
+.header-welcome h3 {
+    margin: 0 1rem 0.25rem 0; /* Ajustamos márgenes */
+}
+.header-welcome p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Espacio entre los botones */
+}
+
+/* Unificamos un poco el estilo de los botones del header */
+.header-actions .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.header-actions .btn-secondary {
+    background-color: #6c757d;
+    color: var(--blanco-uls);
+}
+
+.header-actions .btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.header-actions .btn-logout {
+    background-color: var(--rojo-uls);
+    color: var(--blanco-uls);
+}
+
+.header-actions .btn-logout:hover {
+    background-color: #a81022;
+}
+
+/* Hacemos un pequeño ajuste al contenedor del panel */
+.panel-container {
+    max-width: 1200px; /* Le damos el mismo ancho que el panel de admin */
+    margin: 2rem auto; /* Lo centramos en la página */
+    background: var(--blanco-uls);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 .panel-main { display: flex; }
 .call-section, .queue-section { padding: 1.5rem; }
 .call-section { flex: 1; text-align: center; border-right: 1px solid var(--gris-claro); }
@@ -284,4 +346,46 @@ body {
 }
 .flash-message-panel.info {
     background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;
+}
+
+/* ==========================================================================
+   4. BARRA DE INFORMACIÓN ADICIONAL (RELOJ Y MARQUESINA)
+   ========================================================================== */
+.info-bar {
+    background-color: #444; /* Un gris oscuro que combina */
+    color: var(--blanco-uls);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 2rem;
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.clock {
+    flex-shrink: 0; /* Evita que el reloj se encoja */
+    margin-right: 2rem; /* Espacio entre el reloj y el mensaje */
+}
+
+.marquee {
+    flex-grow: 1; /* Ocupa el espacio restante */
+    overflow: hidden; /* Oculta el texto que sale del contenedor */
+    white-space: nowrap; /* Evita que el texto se parta en varias líneas */
+    position: relative;
+}
+
+.marquee span {
+    display: inline-block;
+    padding-left: 100%; /* Inicia el texto fuera de la pantalla a la derecha */
+    animation: marquee-scroll 20s linear infinite; /* Aplica la animación */
+}
+
+/* Creamos la animación de desplazamiento */
+@keyframes marquee-scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-100%); /* Mueve el texto completamente hacia la izquierda */
+    }
 }
