@@ -1,4 +1,6 @@
-from app import app, db, Usuario
+from app import create_app, db, Usuario
+
+app = create_app()
 
 with app.app_context():
     print("--- Creación de Nuevo Usuario ---")
@@ -20,11 +22,13 @@ with app.app_context():
     else:
         nuevo_usuario = Usuario(
             nombre_funcionario=nombre, 
-            password=password,
             rol=rol, 
             modulo_asignado=modulo,
             numero_meson=meson
         )
+        # Se asigna la contraseña a través del setter para que se guarde el hash
+        nuevo_usuario.password = password
+        
         db.session.add(nuevo_usuario)
         db.session.commit()
         print(f"¡Usuario '{nombre}' con rol '{rol}' creado exitosamente!")

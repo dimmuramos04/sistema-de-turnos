@@ -128,13 +128,25 @@ def create_app():
 
     # --- CONFIGURACIÓN DE LA APLICACIÓN ---
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-    if os.environ.get('FLASK_ENV') == 'production':
+    
+    # ¡Importante! Asegurarse de que DEBUG esté desactivado en producción.
+    is_production = os.getenv('FLASK_ENV') == 'production'
+    app.config['DEBUG'] = not is_production
+
+    if is_production:
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+        # Configuración de cookies seguras para producción
+        app.config.update(
+            SESSION_COOKIE_SECURE=True,      # Solo enviar cookies sobre HTTPS
+            SESSION_COOKIE_HTTPONLY=True,    # Previene acceso desde JavaScript
+            SESSION_COOKIE_SAMESITE='Lax',   # Protección contra ataques CSRF
+        )
     else:
         basedir = os.path.abspath(os.path.dirname(__file__))
         db_path = os.path.join(basedir, "instance", "database.db")
         os.makedirs(os.path.join(basedir, "instance"), exist_ok=True)
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+        
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # --- INICIALIZACIÓN DE EXTENSIONES CON LA APP ---
@@ -256,6 +268,10 @@ def create_app():
 
             if usuario and usuario.check_password(password):
                 login_user(usuario)
+
+                # --- REGISTRO DE INICIO DE SESIÓN ---
+                app.logger.info(f"Inicio de sesión exitoso: Usuario '{usuario.nombre_funcionario}' (Rol: {usuario.rol})")
+                # ------------------------------------
 
                 # -- LÓGICA DE REDIRECCIÓN POR ROL ---
                 if usuario.rol == 'admin':
@@ -754,11 +770,28 @@ def create_app():
         print("Seeding de datos completado.")
     
     # --- HANDLERS DE SOCKET.IO ---
-    # Los handlers de socketio también van aquí.
+    
+    @socketio.on('connect')
+    def handle_connect():
+        # Para la pantalla pública, permitimos conexiones anónimas.
+        # Para los paneles, podríamos requerir autenticación.
+        # Por ahora, es seguro, pero si añadieras eventos que requieren login,
+        # deberías validarlo aquí.
+        # Ejemplo:
+        # if not current_user.is_authenticated and request.sid in private_namespaces:
+        #     disconnect()
+        print('Cliente conectado')
+
     @socketio.on('join')
     def handle_join(data):
         room = data.get('room')
         if room:
-            join_room(room)
+            # Aquí podrías añadir lógica de validación. Por ejemplo,
+            # que un usuario 'staff' solo pueda unirse a la sala de su módulo.
+            if current_user.is_authenticated and current_user.rol == 'staff':
+                if room == current_user.modulo_asignado:
+                    join_room(room)
+            elif room == 'pantalla_publica': # Cualquiera puede unirse a la pantalla pública
+                join_room(room)
 
     return app

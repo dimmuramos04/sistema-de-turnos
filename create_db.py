@@ -1,4 +1,7 @@
-from app import app, db
+from app import create_app, db
+
+# Creamos una instancia de la aplicación para obtener el contexto
+app = create_app()
 
 # Este script ahora BORRA las tablas antiguas y LUEGO crea las nuevas.
 with app.app_context():

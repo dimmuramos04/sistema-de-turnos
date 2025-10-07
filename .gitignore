@@ -13,3 +13,6 @@ instance/
 
 # Archivos de registro
 logs/
+
+# Scripts locales o redundantes
+seed_db.py
