@@ -389,3 +389,42 @@ body {
         transform: translateX(-100%); /* Mueve el texto completamente hacia la izquierda */
     }
 }
+
+/* ==========================================================================
+   5. ESTILOS PARA MÚLTIPLES PANELES DE LLAMADO
+   ========================================================================== */
+.call-panel-container {
+    flex-grow: 1;
+    display: flex;
+    gap: 1rem;
+    min-height: 0;
+}
+
+.call-panel-container .call-panel {
+    flex: 1; /* Cada panel ocupa el mismo espacio */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ajustamos tamaños para que quepan dos paneles */
+.call-panel-container .call-header {
+    font-size: 2rem;
+    padding: 0.5rem;
+}
+
+.call-panel-container .ticket-number {
+    font-size: 8rem;
+}
+
+.call-panel-container .module-number {
+    font-size: 5rem;
+}
+
+.call-panel-container .module-number::before {
+    font-size: 1.5rem;
+}
+
+.history {
+    min-height: 150px; /* Reducimos un poco la altura del historial */
+    max-height: 30vh;
+}

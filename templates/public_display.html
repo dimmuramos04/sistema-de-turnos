@@ -33,19 +33,40 @@
     </div>
 
     <main class="kiosk-container">
-        <section class="call-panel">
-            <div class="call-header fade-in">
-                {{ llamado.servicio.nombre_modulo if llamado else 'SISTEMA DE TURNOS' }}
-            </div>
-            <div class="call-body">
-                <div class="ticket-number fade-in" style="--ticket-color: {{ llamado.servicio.color_hex if llamado else '#333' }}">
-                    {{ llamado.numero_ticket.split('-')[1] if llamado else '----' }}
+        <div class="call-panel-container">
+            {% for llamado in llamados %}
+            <section class="call-panel" data-ticket-id="{{ llamado.id }}">
+                <div class="call-header fade-in">
+                    {{ llamado.servicio.nombre_modulo }}
                 </div>
-                <div class="module-number fade-in" style="--ticket-color: {{ llamado.servicio.color_hex if llamado else '#333' }}">
-                    {{ llamado.numero_meson if llamado else '-' }}
+                <div class="call-body">
+                    <div class="ticket-number fade-in" style="--ticket-color: {{ llamado.servicio.color_hex }}">
+                        {{ llamado.numero_ticket.split('-')[1] }}
+                    </div>
+                    <div class="module-number fade-in" style="--ticket-color: {{ llamado.servicio.color_hex }}">
+                        {{ llamado.numero_meson }}
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
+            {% endfor %}
+            
+            {# Rellenar con paneles vacíos si hay menos de 2 llamados #}
+            {% for i in range(llamados|length, 2) %}
+            <section class="call-panel is-empty" data-ticket-id="">
+                <div class="call-header fade-in">
+                    SISTEMA DE TURNOS
+                </div>
+                <div class="call-body">
+                    <div class="ticket-number fade-in" style="--ticket-color: #333">
+                        ----
+                    </div>
+                    <div class="module-number fade-in" style="--ticket-color: #333">
+                        -
+                    </div>
+                </div>
+            </section>
+            {% endfor %}
+        </div>
 
         <section class="history">
             <div class="history-header">Últimos Llamados</div>
@@ -70,8 +91,9 @@
     document.addEventListener('DOMContentLoaded', (event) => {
         const overlay = document.getElementById('start-overlay');
         const audio = new Audio("{{ url_for('static', filename='sounds/alerta.mp3') }}");
+        let callPanels = Array.from(document.querySelectorAll('.call-panel-container .call-panel'));
 
-        // --- 1. LÓGICA DEL RELOJ ---
+        // --- LÓGICA DEL RELOJ (sin cambios) ---
         function actualizarReloj() {
             const relojEl = document.getElementById('reloj');
             if (relojEl) {
@@ -79,27 +101,19 @@
                 const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 const fecha = ahora.toLocaleDateString('es-CL', opcionesFecha);
                 const hora = ahora.toLocaleTimeString('es-CL');
-                // Capitalizamos la primera letra del día de la semana
                 const fechaFormateada = fecha.charAt(0).toUpperCase() + fecha.slice(1);
                 relojEl.textContent = `${fechaFormateada} | ${hora}`;
             }
         }
-
-        // Actualizamos el reloj inmediatamente al cargar la página
         actualizarReloj(); 
-        // Y luego, lo actualizamos cada segundo
         setInterval(actualizarReloj, 1000);
-        // --- LÓGICA PARA PANTALLA DE BIENVENIDA SOLO LA PRIMERA VEZ ---
+
+        // --- LÓGICA DE PANTALLA DE BIENVENIDA (sin cambios) ---
         if (localStorage.getItem('pantallaTurnosIniciada')) {
             overlay.style.display = 'none';
-            // El audio ya está desbloqueado, pero por seguridad lo intentamos de nuevo
-            audio.play().catch(e => {});
-            audio.pause();
-            audio.currentTime = 0;
         } else {
             overlay.addEventListener('click', () => {
                 overlay.style.display = 'none';
-                // Truco para que el navegador permita reproducir audio más tarde.
                 audio.play().catch(e => {});
                 audio.pause();
                 audio.currentTime = 0;
@@ -108,115 +122,129 @@
             }, { once: true });
         }
 
-        // --- 3. LÓGICA DE CONEXIÓN EN TIEMPO REAL ---
+        // --- LÓGICA DE CONEXIÓN EN TIEMPO REAL ---
         var socket = io();
-
-        // Se ejecuta cuando la conexión con el servidor es exitosa.
         socket.on('connect', function() {
             console.log('EVENTO: ¡Conexión exitosa al servidor!');
-            // Le pide al servidor unirse a la sala de la pantalla pública.
             socket.emit('join', {room: 'pantalla_publica'});
         });
-        
-        // Se ejecuta si hay un error al intentar conectar.
         socket.on('connect_error', (err) => {
             console.error('EVENTO: ¡Error de conexión!', err);
         });
 
-        // --- 4. LÓGICA PARA REACCIONAR A NUEVOS LLAMADOS ---
-        socket.on('nuevo_llamado', function(data) {
-            console.log('EVENTO: Nuevo llamado recibido:', data);
+        // --- LÓGICA PARA ACTUALIZAR UN PANEL ESPECÍFICO ---
+        function updatePanel(panel, data) {
+            panel.classList.remove('is-empty');
+            panel.dataset.ticketId = data.id_ticket;
 
-            // --- LÓGICA PARA LA ANIMACIÓN (VERSIÓN MEJORADA) ---
-            const callPanel = document.querySelector('.call-panel');
-
-            // 1. Añadimos la clase para que la animación comience
-            callPanel.classList.add('is-calling');
-
-            // 2. Programamos que la clase se quite sola cuando la animación termine
-            // (Nuestra animación en el CSS dura 1.2s, que son 1200 milisegundos)
-            setTimeout(() => {
-                callPanel.classList.remove('is-calling');
-            }, 1200);
-            // --------------------------------------------------
-
-            // -----------------------------------------------------------------
-            // PARTE 1: REPRODUCIR SONIDO
-            // -----------------------------------------------------------------
-            audio.play().catch(e => console.error("Error al reproducir sonido:", e));
-
-            // -----------------------------------------------------------------
-            // PARTE 2: ACTUALIZAR LA "LLAMADA ACTUAL" (LA PARTE QUE SE ROMPIÓ)
-            // -----------------------------------------------------------------
-            const callHeaderEl = document.querySelector('.call-header');
+            const callHeaderEl = panel.querySelector('.call-header');
             callHeaderEl.innerText = data.nombre_modulo;
-            callHeaderEl.style.color = data.color_hex;
 
-            const ticketNumberEl = document.querySelector('.ticket-number');
-            const numeroVisible = data.numero_ticket.split('-')[1]; // Corregimos para mostrar solo "A00"
-            ticketNumberEl.innerText = numeroVisible;
+            const ticketNumberEl = panel.querySelector('.ticket-number');
+            ticketNumberEl.innerText = data.numero_ticket.split('-')[1];
             ticketNumberEl.style.setProperty('--ticket-color', data.color_hex);
 
-            const moduleNumberEl = document.querySelector('.module-number');
+            const moduleNumberEl = panel.querySelector('.module-number');
             moduleNumberEl.innerText = data.numero_meson;
             moduleNumberEl.style.setProperty('--ticket-color', data.color_hex);
 
-            // -----------------------------------------------------------------
-            // PARTE 3: ACTUALIZAR EL HISTORIAL DE "ÚLTIMOS LLAMADOS"
-            // -----------------------------------------------------------------
-            const historyList = document.querySelector('.history-list');
-            const noHistoryMsg = historyList.querySelector('.no-history');
-            if (noHistoryMsg) {
-                noHistoryMsg.remove();
+            // Animación y sonido
+            panel.classList.add('is-calling');
+            setTimeout(() => panel.classList.remove('is-calling'), 1200);
+            if (localStorage.getItem('pantallaTurnosIniciada')) {
+                audio.play().catch(e => console.error("Error al reproducir sonido:", e));
             }
+        }
 
-            const newHistoryItem = document.createElement('li');
-    
-            const ticketSpan = document.createElement('span');
-            ticketSpan.className = 'history-ticket';
-            ticketSpan.style.setProperty('--ticket-color', data.color_hex);
-            const numeroVisibleHistorial = data.numero_ticket.split('-')[1];
-            ticketSpan.innerText = numeroVisibleHistorial;
+        // --- LÓGICA PARA LIMPIAR UN PANEL ESPECÍFICO ---
+        function clearPanel(panel) {
+            panel.classList.add('is-empty');
+            panel.dataset.ticketId = "";
 
-            const serviceSpan = document.createElement('span');
-            serviceSpan.className = 'history-service';
-            serviceSpan.innerText = data.nombre_modulo;
+            panel.querySelector('.call-header').innerText = 'SISTEMA DE TURNOS';
+            
+            const ticketNumberEl = panel.querySelector('.ticket-number');
+            ticketNumberEl.innerText = '----';
+            ticketNumberEl.style.setProperty('--ticket-color', '#333');
 
-            const moduleSpan = document.createElement('span');
-            moduleSpan.className = 'history-module';
-            moduleSpan.innerText = 'Módulo ' + data.numero_meson;
+            const moduleNumberEl = panel.querySelector('.module-number');
+            moduleNumberEl.innerText = '-';
+            moduleNumberEl.style.setProperty('--ticket-color', '#333');
+        }
 
-            newHistoryItem.appendChild(ticketSpan);
-            newHistoryItem.appendChild(serviceSpan);
-            newHistoryItem.appendChild(moduleSpan);
+        // --- LÓGICA PARA ACTUALIZAR EL HISTORIAL ---
+        function updateHistory(historial) {
+            const historyList = document.querySelector('.history-list');
+            historyList.innerHTML = ''; // Limpiar la lista actual
 
-            historyList.prepend(newHistoryItem);
+            if (historial && historial.length > 0) {
+                historial.forEach(ticket => {
+                    const li = document.createElement('li');
+                    li.className = 'fade-in';
+                    li.innerHTML = `
+                        <span class="history-ticket" style="--ticket-color: ${ticket.color_hex}">${ticket.numero_ticket.split('-')[1]}</span>
+                        <span class="history-service">${ticket.modulo_solicitado}</span>
+                        <span class="history-module">Módulo ${ticket.numero_meson}</span>
+                    `;
+                    historyList.appendChild(li);
+                });
+            } else {
+                historyList.innerHTML = '<li class="no-history fade-in"><span>No hay llamados recientes.</span></li>';
+            }
+        }
 
-            while (historyList.children.length > 4) {
-            historyList.removeChild(historyList.lastChild);
+        // --- LÓGICA PARA REACCIONAR A NUEVOS LLAMADOS ---
+        socket.on('nuevo_llamado', function(data) {
+            console.log('EVENTO: Nuevo llamado recibido:', data);
+            
+            const llamadoData = data.llamado;
+            const historialData = data.historial;
+
+            // Buscar si el ticket ya está siendo mostrado (para re-llamados)
+            let existingPanel = callPanels.find(p => p.dataset.ticketId == llamadoData.id_ticket);
+
+            if (existingPanel) {
+                // Si ya existe, es un re-llamado. Solo lo animamos.
+                existingPanel.classList.add('is-calling');
+                setTimeout(() => existingPanel.classList.remove('is-calling'), 1200);
+                 if (localStorage.getItem('pantallaTurnosIniciada')) {
+                    audio.play().catch(e => console.error("Error al reproducir sonido:", e));
+                }
+            } else {
+                // Si es un nuevo llamado, buscar un panel vacío
+                let emptyPanel = callPanels.find(p => p.classList.contains('is-empty'));
+                if (emptyPanel) {
+                    updatePanel(emptyPanel, llamadoData);
+                } else {
+                    // Si no hay paneles vacíos, reemplazamos el más antiguo (el último en la lista)
+                    const panelToReplace = callPanels[callPanels.length - 1];
+                    updatePanel(panelToReplace, llamadoData);
+                    // Movemos el panel actualizado al principio del contenedor para que visualmente sea el "más nuevo"
+                    panelToReplace.parentElement.prepend(panelToReplace);
+                    // Actualizamos la referencia del array de paneles
+                    callPanels = Array.from(document.querySelectorAll('.call-panel-container .call-panel'));
+                }
+            }
+            
+            // Actualizar el historial dinámicamente
+            if (historialData) {
+                updateHistory(historialData);
             }
         });
 
-        // --- 5. LÓGICA PARA REACCIONAR A FINALIZACIÓN DE ATENCIÓN ---
+        // --- LÓGICA PARA REACCIONAR A FINALIZACIÓN DE ATENCIÓN ---
         socket.on('atencion_finalizada', function(data) {
             console.log('EVENTO: Atención finalizada recibida:', data);
-            // Opcional: reproducir un sonido diferente si lo deseas
-            // audio.play().catch(e => console.error("Error al reproducir sonido:", e));
+            
+            const panelToClear = callPanels.find(p => p.dataset.ticketId == data.id_ticket);
+            if (panelToClear) {
+                clearPanel(panelToClear);
+            }
 
-            // Limpiar la pantalla principal (llamado actual)
-            document.querySelector('.call-header').innerText = 'SISTEMA DE TURNOS';
-            var ticketNumberEl = document.querySelector('.ticket-number');
-            ticketNumberEl.innerText = '----';
-            ticketNumberEl.style.setProperty('--ticket-color', '#333');
-            var moduleNumberEl = document.querySelector('.module-number');
-            moduleNumberEl.innerText = '-';
-            moduleNumberEl.style.setProperty('--ticket-color', '#333');
-
-            // Recargar la página para actualizar todo el contenido
-            // El overlay no volverá a aparecer gracias al script inline al inicio
-            setTimeout(function() {
-                window.location.reload();
-            }, 500);
+            // Actualizar el historial dinámicamente
+            if (data.historial) {
+                updateHistory(data.historial);
+            }
         });
     });
 </script>

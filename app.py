@@ -118,6 +118,19 @@ class ChangePasswordForm(FlaskForm):
     submit = SubmitField('Cambiar Contraseña')
 
 
+def _get_historial_data():
+    """Busca los últimos 4 tickets para el historial y los serializa."""
+    historial = Ticket.query.filter(Ticket.estado.in_(['en_atencion', 'finalizado'])) \
+                        .order_by(Ticket.hora_llamado.desc()).limit(4).all()
+    historial_data = [{
+        'numero_ticket': t.numero_ticket,
+        'modulo_solicitado': t.modulo_solicitado,
+        'numero_meson': t.numero_meson,
+        'color_hex': t.servicio.color_hex
+    } for t in historial]
+    return historial_data
+
+
 # --- FUNCIÓN DE FÁBRICA DE LA APLICACIÓN ---
 def create_app():
     load_dotenv()
@@ -190,16 +203,16 @@ def create_app():
 
     @app.route('/')
     def pantalla_publica():
-        # Buscamos el último ticket que esté "en atención"
-        llamado_actual = Ticket.query.filter_by(estado='en_atencion').order_by(Ticket.hora_llamado.desc()).first()
+        # Obtenemos los últimos 2 tickets que estén "en atención"
+        llamados_actuales = Ticket.query.filter_by(estado='en_atencion').order_by(Ticket.hora_llamado.desc()).limit(2).all()
 
-        # Buscamos los últimos 5 tickets finalizados o en atención para el historial
+        # Buscamos los últimos 4 tickets finalizados o en atención para el historial
         historial = Ticket.query.filter(Ticket.estado.in_(['en_atencion', 'finalizado']))\
-                            .order_by(Ticket.hora_llamado.desc()).limit(5).all()
+                            .order_by(Ticket.hora_llamado.desc()).limit(4).all()
 
         return render_template(
             'public_display.html',
-            llamado=llamado_actual,
+            llamados=llamados_actuales,
             historial=historial
         )
 
@@ -636,12 +649,17 @@ def create_app():
             db.session.commit()
             # --- LÍNEAS NUEVAS PARA LA ALERTA EN TIEMPO REAL ---
             datos_llamado = {
+                'id_ticket': ticket_a_llamar.id,
                 'nombre_modulo': ticket_a_llamar.servicio.nombre_modulo,
                 'numero_ticket': ticket_a_llamar.numero_ticket,
                 'color_hex': ticket_a_llamar.servicio.color_hex,
                 'numero_meson': ticket_a_llamar.numero_meson
             }
-            socketio.emit('nuevo_llamado', datos_llamado, room='pantalla_publica')
+            payload = {
+                'llamado': datos_llamado,
+                'historial': _get_historial_data()
+            }
+            socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
             # --------------------------------------------------
             flash(f"Llamando al ticket {ticket_a_llamar.numero_ticket}", "success")
         else:
@@ -661,13 +679,18 @@ def create_app():
         if ticket_a_rellamar and ticket_a_rellamar.atendido_por_id == current_user.id:
             # Preparamos los mismos datos que en 'llamar_siguiente'
             datos_llamado = {
+                'id_ticket': ticket_a_rellamar.id,
                 'nombre_modulo': ticket_a_rellamar.servicio.nombre_modulo,
                 'numero_ticket': ticket_a_rellamar.numero_ticket,
                 'color_hex': ticket_a_rellamar.servicio.color_hex,
                 'numero_meson': ticket_a_rellamar.numero_meson
             }
+            payload = {
+                'llamado': datos_llamado,
+                'historial': _get_historial_data()
+            }
             # Reenviamos el evento a la pantalla pública
-            socketio.emit('nuevo_llamado', datos_llamado, room='pantalla_publica')
+            socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
             flash(f"Se ha vuelto a llamar al ticket {ticket_a_rellamar.numero_ticket}", "info")
         else:
             flash("Error al intentar volver a llamar al ticket.", "error")
@@ -688,13 +711,11 @@ def create_app():
             ticket_a_finalizar.hora_finalizado = datetime.now(zona_horaria_chile)
             db.session.commit()
             # Emitimos evento para actualizar la pantalla principal
-            datos_finalizado = {
-                'numero_ticket': ticket_a_finalizar.numero_ticket,
-                'nombre_modulo': ticket_a_finalizar.servicio.nombre_modulo,
-                'color_hex': ticket_a_finalizar.servicio.color_hex,
-                'numero_meson': ticket_a_finalizar.numero_meson
+            payload = {
+                'id_ticket': ticket_a_finalizar.id,
+                'historial': _get_historial_data()
             }
-            socketio.emit('atencion_finalizada', datos_finalizado, room='pantalla_publica')
+            socketio.emit('atencion_finalizada', payload, room='pantalla_publica')
             flash(f"Atención del ticket {ticket_a_finalizar.numero_ticket} finalizada.", "info")
         else:
             flash("Error al intentar finalizar el ticket.", "error")
