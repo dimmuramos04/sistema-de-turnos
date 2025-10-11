@@ -260,7 +260,7 @@ def create_app():
                 'numero_ticket': numero_ticket_str,
                 'modulo_solicitado': servicio.nombre_modulo,
                 'color_hex': servicio.color_hex,
-                'hora_registro': nuevo_ticket.hora_registro.strftime('%H:%M:%S')
+                'hora_registro': nuevo_ticket.hora_registro.isoformat()
             }
             # Usamos el nombre del módulo como "sala" para que solo el staff correspondiente reciba el evento
             socketio.emit('nuevo_ticket_registrado', datos_ticket, room=servicio.nombre_modulo)

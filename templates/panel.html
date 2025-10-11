@@ -50,7 +50,7 @@
                 {% for ticket in tickets_en_espera %}
                 <li>
                     <span class="ticket-name">{{ ticket.numero_ticket }}</span>
-                    <span class="ticket-time">{{ ticket.hora_registro.strftime('%H:%M:%S') }}</span>
+                    <span class="ticket-time" data-isodate="{{ ticket.hora_registro.isoformat() }}"></span>
                 </li>
                 {% else %}
                 <li class="no-tickets">No hay nadie en espera.</li>
@@ -64,34 +64,45 @@
 <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
-        // Obtener el nombre del módulo asignado al staff desde el contexto de Jinja
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            // Usamos el locale 'es-CL' para asegurar el formato de 24 horas si el navegador no lo tiene por defecto
+            return new Date(isoString).toLocaleTimeString('es-CL', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        }
+
+        // Formatear las horas de los tickets que ya están en la lista al cargar la página
+        document.querySelectorAll('.ticket-time[data-isodate]').forEach(function(span) {
+            span.textContent = formatTime(span.dataset.isodate);
+        });
+
         var moduloAsignado = "{{ current_user.modulo_asignado }}";
         var socket = io();
 
-        // Unirse a la sala del módulo correspondiente
         socket.on('connect', function() {
             socket.emit('join', {room: moduloAsignado});
             console.log('Unido a la sala del módulo:', moduloAsignado);
         });
 
-        // Escuchar el evento de nuevo ticket registrado para este módulo
         socket.on('nuevo_ticket_registrado', function(data) {
             console.log('Nuevo ticket recibido para este módulo:', data);
-            // Crear el nuevo elemento de la lista
             var ul = document.querySelector('.waiting-list');
-            // Si existe el mensaje de "No hay nadie en espera", lo eliminamos
             var noTickets = ul.querySelector('.no-tickets');
             if (noTickets) {
                 ul.removeChild(noTickets);
             }
-            // Crear el nuevo ticket
             var li = document.createElement('li');
             var spanName = document.createElement('span');
             spanName.className = 'ticket-name';
             spanName.textContent = data.numero_ticket;
             var spanTime = document.createElement('span');
             spanTime.className = 'ticket-time';
-            spanTime.textContent = data.hora_registro;
+            // Formateamos la hora del nuevo ticket que llega por socket
+            spanTime.textContent = formatTime(data.hora_registro);
             li.appendChild(spanName);
             li.appendChild(spanTime);
             ul.appendChild(li);
