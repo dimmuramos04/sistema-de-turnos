@@ -14,5 +14,9 @@ instance/
 # Archivos de registro
 logs/
 
-# Scripts locales o redundantes
-seed_db.py
+# Ignorar a sí mismo y la carpeta de Git
+.gcloudignore
+.git
+
+# Archivo específico de Render
+build.sh
