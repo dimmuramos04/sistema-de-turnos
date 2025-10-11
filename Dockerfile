@@ -18,4 +18,4 @@ EXPOSE 8080
 
 # Comando para ejecutar la aplicación en producción
 # Usamos gunicorn con el worker de eventlet, crucial para Socket.IO
-CMD exec gunicorn --bind :8080 --workers 1 --threads 8 --timeout 0 wsgi:app
+CMD exec gunicorn --worker-class eventlet -w 1 --bind :8080 wsgi:app
