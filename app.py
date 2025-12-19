@@ -511,6 +511,26 @@ def create_app():
         usuarios = Usuario.query.all()
         return render_template('gestionar_usuarios.html', usuarios=usuarios)
 
+    @app.route('/admin/reset_servicio/<int:service_id>', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def reset_servicio(service_id):
+        servicio = db.session.get(Servicio, service_id)
+        if servicio:
+            # 1. ELIMINAMOS los tickets antiguos de este servicio
+            # Esto es necesario para liberar los números (ej: A00) y que no dé error de duplicado.
+            Ticket.query.filter_by(servicio_id=service_id).delete()
+            
+            # 2. REINICIAMOS los contadores a A - 0
+            servicio.letra_actual = 'A'
+            servicio.numero_actual = 0
+            
+            db.session.commit()
+            flash(f'Historial borrado y contador reiniciado para "{servicio.nombre_modulo}".', 'success')
+        else:
+            flash('Servicio no encontrado.', 'error')
+        return redirect(url_for('gestionar_servicios'))
+
     @app.route('/admin/servicios')
     @login_required
     @role_required('admin')
