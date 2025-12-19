@@ -18,6 +18,12 @@
             {{ form.servicio.label }}
             {{ form.servicio(class='form-control') }}
         </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
+            {{ form.es_preferencial(class='form-check-input', style="width: 20px; height: 20px;") }}
+            <label for="es_preferencial" style="margin: 0; font-weight: bold; color: #CF142B;">
+                ATENCIÓN PREFERENCIAL (3ra edad, Embarazadas, Discapacidad)
+            </label>
+        </div>
         {{ form.submit(class='btn-submit') }}
     </form>
 

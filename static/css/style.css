@@ -43,6 +43,34 @@ body {
     content: "Módulo"; display: block; font-size: 2rem;
     font-weight: 500; color: var(--negro-texto);
 }
+
+/* =========================================================
+   NUEVO: ESTILOS PARA ATENCIÓN PREFERENCIAL (VIP)
+   ========================================================= */
+.vip-badge {
+    background-color: var(--rojo-uls); /* Usamos tu variable de rojo ULS */
+    color: var(--blanco-uls);
+    font-size: 1.8rem;               /* Texto grande y visible */
+    font-weight: 800;
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;             /* Bordes redondeados estilo "pill" */
+    margin-bottom: 1.5rem;           /* Espacio para separarlo del número */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 8px rgba(207, 20, 43, 0.4); /* Sombra rojiza suave */
+    animation: pulse-vip 1.5s infinite ease-in-out; /* Animación de latido */
+    border: 2px solid white;         /* Un borde blanco para resaltar */
+}
+
+/* Definimos una animación exclusiva para el VIP (suave y continua) */
+@keyframes pulse-vip {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); } /* Crece un 8% */
+    100% { transform: scale(1); }
+}
+
+/* ========================================================= */
+
 .history { min-height: 200px; max-height: 40vh; }
 .history-header {
     font-size: 1.2rem; padding: 0.5rem; text-align: center;

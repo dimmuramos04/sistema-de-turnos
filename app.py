@@ -5,12 +5,13 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField
+from wtforms import StringField, PasswordField, SubmitField, SelectField, IntegerField, BooleanField
 from wtforms.validators import DataRequired, Optional
 from flask_wtf.csrf import CSRFProtect
 from functools import wraps
@@ -70,6 +71,7 @@ class Ticket(db.Model):
     hora_llamado = db.Column(db.DateTime, nullable=True)
     hora_finalizado = db.Column(db.DateTime, nullable=True)
     atendido_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    es_preferencial = db.Column(db.Boolean, default=False)
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicio.id'), nullable=False)
     servicio = relationship('Servicio')
     numero_meson = db.Column(db.Integer, nullable=True)
@@ -84,6 +86,7 @@ class LoginForm(FlaskForm):
 class RegistroForm(FlaskForm):
     rut = StringField('RUT del Solicitante', validators=[DataRequired()])
     servicio = SelectField('Servicio Solicitado', coerce=int, validators=[DataRequired()])
+    es_preferencial = BooleanField('¿Atención Preferencial?')
     submit = SubmitField('Registrar y Generar Número')
 
 class AccionForm(FlaskForm):
@@ -94,7 +97,7 @@ class CrearUsuarioForm(FlaskForm):
     password = PasswordField('Contraseña', validators=[DataRequired()])
     rol = SelectField('Rol', choices=[('staff', 'Staff (Atención)'), ('registrador', 'Registrador')], validators=[DataRequired()])
     modulo_asignado = SelectField('Módulo Asignado', coerce=int, validators=[Optional()])
-    numero_meson = StringField('Número de Mesón (solo para rol staff)')
+    numero_meson = IntegerField('Número de Mesón (solo para rol staff)', validators=[Optional()])
     submit = SubmitField('Crear Usuario')
 
 class EditarUsuarioForm(FlaskForm):
@@ -102,7 +105,7 @@ class EditarUsuarioForm(FlaskForm):
     password = PasswordField('Nueva Contraseña (dejar en blanco para no cambiar)')
     rol = SelectField('Rol', choices=[('staff', 'Staff (Atención)'), ('registrador', 'Registrador'), ('admin', 'Administrador')], validators=[DataRequired()])
     modulo_asignado = SelectField('Módulo Asignado', coerce=int, validators=[Optional()])
-    numero_meson = StringField('Número de Mesón (solo para rol staff)')
+    numero_meson = IntegerField('Número de Mesón (solo para rol staff)', validators=[Optional()])
     submit = SubmitField('Actualizar Usuario')
 
 class CrearServicioForm(FlaskForm):
@@ -227,46 +230,65 @@ def create_app():
         if form.validate_on_submit():
             rut_cliente = form.rut.data
             servicio_id = form.servicio.data
-        
-            servicio = db.session.get(Servicio, servicio_id)
-        
-            # --- Lógica para generar el número (la movemos aquí dentro) ---
-            letra_para_ticket = servicio.letra_actual
-            numero_para_ticket = servicio.numero_actual
-            siguiente_numero = numero_para_ticket + 1
-            siguiente_letra = letra_para_ticket
-            if siguiente_numero > 99:
-                siguiente_numero = 0
-                siguiente_letra = chr(ord(letra_para_ticket) + 1)
-        
-            numero_ticket_str = f"{servicio.prefijo_ticket}-{letra_para_ticket}{numero_para_ticket:02d}"
-        
-            servicio.numero_actual = siguiente_numero
-            servicio.letra_actual = siguiente_letra
-        
-            nuevo_ticket = Ticket(
-                numero_ticket=numero_ticket_str,
-                rut_cliente=rut_cliente,
-                modulo_solicitado=servicio.nombre_modulo,
-                servicio_id=servicio.id,
-                hora_registro=datetime.now(zona_horaria_chile)
-            )
-        
-            db.session.add(nuevo_ticket)
-            db.session.commit()
+            
+            intentos = 0
+            max_intentos = 3 # Intentará 3 veces antes de rendirse
+            
+            while intentos < max_intentos:
+                try:
+                    # Importante: Buscamos el servicio DENTRO del loop para tener el dato fresco
+                    servicio = db.session.get(Servicio, servicio_id)
+                
+                    # --- Lógica para generar el número ---
+                    letra_para_ticket = servicio.letra_actual
+                    numero_para_ticket = servicio.numero_actual
+                    siguiente_numero = numero_para_ticket + 1
+                    siguiente_letra = letra_para_ticket
+                    if siguiente_numero > 99:
+                        siguiente_numero = 0
+                        siguiente_letra = chr(ord(letra_para_ticket) + 1)
+                
+                    numero_ticket_str = f"{servicio.prefijo_ticket}-{letra_para_ticket}{numero_para_ticket:02d}"
+                
+                    # Actualizamos el servicio
+                    servicio.numero_actual = siguiente_numero
+                    servicio.letra_actual = siguiente_letra
+                
+                    nuevo_ticket = Ticket(
+                        numero_ticket=numero_ticket_str,
+                        rut_cliente=rut_cliente,
+                        modulo_solicitado=servicio.nombre_modulo,
+                        servicio_id=servicio.id,
+                        hora_registro=datetime.now(zona_horaria_chile),
+                        es_preferencial=form.es_preferencial.data
+                    )
+                
+                    db.session.add(nuevo_ticket)
+                    db.session.commit() # AQUÍ es donde podría chocar
 
-            # Emitimos evento para paneles staff del módulo correspondiente
-            datos_ticket = {
-                'numero_ticket': numero_ticket_str,
-                'modulo_solicitado': servicio.nombre_modulo,
-                'color_hex': servicio.color_hex,
-                'hora_registro': nuevo_ticket.hora_registro.isoformat()
-            }
-            # Usamos el nombre del módulo como "sala" para que solo el staff correspondiente reciba el evento
-            socketio.emit('nuevo_ticket_registrado', datos_ticket, room=servicio.nombre_modulo)
+                    # --- SI LLEGA AQUÍ, TODO SALIÓ BIEN ---
+                    
+                    # Emitimos evento para paneles staff
+                    datos_ticket = {
+                        'numero_ticket': numero_ticket_str,
+                        'modulo_solicitado': servicio.nombre_modulo,
+                        'color_hex': servicio.color_hex,
+                        'hora_registro': nuevo_ticket.hora_registro.isoformat()
+                    }
+                    socketio.emit('nuevo_ticket_registrado', datos_ticket, room=servicio.nombre_modulo)
 
-            flash(f"¡Registro Exitoso! Número Asignado: {numero_ticket_str}", "success")
-            return redirect(url_for('registro'))
+                    flash(f"¡Registro Exitoso! Número Asignado: {numero_ticket_str}", "success")
+                    return redirect(url_for('registro'))
+                
+                except IntegrityError:
+                    # ¡CHOQUE DETECTADO!
+                    db.session.rollback() # Cancelamos la transacción fallida
+                    intentos += 1
+                    # El bucle se repite, vuelve a leer el servicio (que ya tendrá el número actualizado por el otro usuario) y prueba de nuevo.
+                    continue
+
+            # Si sale del while es que falló 3 veces seguidas (muy raro)
+            flash("Error de concurrencia: El sistema está muy ocupado, intente nuevamente.", "error")
 
         return render_template('registro.html', form=form)
 
@@ -425,8 +447,8 @@ def create_app():
                     if servicio_seleccionado:
                         nuevo_usuario.modulo_asignado = servicio_seleccionado.nombre_modulo
                 
-                    if form.numero_meson.data:
-                        nuevo_usuario.numero_meson = int(form.numero_meson.data)
+                    if form.numero_meson.data is not None:
+                        nuevo_usuario.numero_meson = form.numero_meson.data
 
                 db.session.add(nuevo_usuario)
                 db.session.commit()
@@ -490,8 +512,13 @@ def create_app():
         
             if usuario_a_editar.rol == 'staff':
                 servicio_seleccionado = db.session.get(Servicio, form.modulo_asignado.data)
-                if form.numero_meson.data:
-                    usuario_a_editar.numero_meson = int(form.numero_meson.data)
+                if servicio_seleccionado:
+                    usuario_a_editar.modulo_asignado = servicio_seleccionado.nombre_modulo
+                else:
+                    usuario_a_editar.modulo_asignado = None
+
+                if form.numero_meson.data is not None:
+                    usuario_a_editar.numero_meson = form.numero_meson.data
             else:
                 usuario_a_editar.modulo_asignado = None
                 usuario_a_editar.numero_meson = None
@@ -642,49 +669,72 @@ def create_app():
     @login_required
     @role_required('staff')
     def llamar_siguiente():
-        # 1. Buscar el ticket más antiguo que esté "en_espera" para el módulo del funcionario
-        ticket_a_llamar = Ticket.query.filter_by(
-            modulo_solicitado=current_user.modulo_asignado,
-            estado='en_espera'
-        ).order_by(Ticket.hora_registro.asc()).first()
-
-        # 2. Si se encuentra un ticket, se actualiza su estado
-        if ticket_a_llamar:
-            # Primero, revisa si este mismo funcionario ya tiene un ticket "en_atencion"
-            ticket_previo = Ticket.query.filter_by(
-                atendido_por_id=current_user.id,
-                estado='en_atencion'
+        # Bucle infinito que se rompe solo cuando logramos tomar un ticket o no hay nadie
+        while True:
+            # 1. Buscar el candidato más antiguo
+            ticket_candidato = Ticket.query.filter_by(
+                modulo_solicitado=current_user.modulo_asignado,
+                estado='en_espera'
+            ).order_by(
+                Ticket.es_preferencial.desc(),
+                Ticket.hora_registro.asc()
             ).first()
-        
-            # Si lo tiene, lo marca como "finalizado" antes de llamar al nuevo
-            if ticket_previo:
-                ticket_previo.estado = 'finalizado'
 
-            # Ahora sí, actualizamos el nuevo ticket
-            ticket_a_llamar.estado = 'en_atencion'
-            ticket_a_llamar.hora_llamado = datetime.now(zona_horaria_chile)
-            ticket_a_llamar.atendido_por_id = current_user.id
-            ticket_a_llamar.numero_meson = current_user.numero_meson
-        
+            if not ticket_candidato:
+                flash("No hay más personas en espera.", "info")
+                break # Salimos del bucle porque no hay nadie
+
+            # 2. INTENTO DE RESERVA ATÓMICA (La Clave Mágica)
+            # Intentamos actualizar el ticket SOLO SI su estado sigue siendo 'en_espera'.
+            # Si alguien (Bea) nos ganó el clic hace 1 milisegundo, el estado ya será 'en_atencion'
+            # y esta actualización afectará a 0 filas.
+            filas_actualizadas = Ticket.query.filter(
+                Ticket.id == ticket_candidato.id,
+                Ticket.estado == 'en_espera'
+            ).update({
+                'estado': 'en_atencion',
+                'hora_llamado': datetime.now(zona_horaria_chile),
+                'atendido_por_id': current_user.id,
+                'numero_meson': current_user.numero_meson
+            }, synchronize_session=False)
+
             db.session.commit()
-            # --- LÍNEAS NUEVAS PARA LA ALERTA EN TIEMPO REAL ---
-            datos_llamado = {
-                'id_ticket': ticket_a_llamar.id,
-                'nombre_modulo': ticket_a_llamar.servicio.nombre_modulo,
-                'numero_ticket': ticket_a_llamar.numero_ticket,
-                'color_hex': ticket_a_llamar.servicio.color_hex,
-                'numero_meson': ticket_a_llamar.numero_meson
-            }
-            payload = {
-                'llamado': datos_llamado,
-                'historial': _get_historial_data()
-            }
-            socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
-            # --------------------------------------------------
-            flash(f"Llamando al ticket {ticket_a_llamar.numero_ticket}", "success")
-        else:
-            # 3. Si no se encuentran tickets, se informa al funcionario
-            flash("No hay más personas en espera.", "info")
+
+            # 3. Verificamos si ganamos la carrera
+            if filas_actualizadas > 0:
+                # ¡Ganamos! Somos dueños del ticket, procedemos a notificar.
+                
+                # (Opcional) Limpiar ticket anterior si había uno colgado
+                Ticket.query.filter(
+                    Ticket.atendido_por_id == current_user.id,
+                    Ticket.estado == 'en_atencion',
+                    Ticket.id != ticket_candidato.id # Que no sea el que acabamos de tomar
+                ).update({'estado': 'finalizado'})
+                db.session.commit()
+
+                # --- Notificación por WebSockets ---
+                datos_llamado = {
+                    'id_ticket': ticket_candidato.id,
+                    'nombre_modulo': ticket_candidato.servicio.nombre_modulo,
+                    'numero_ticket': ticket_candidato.numero_ticket,
+                    'color_hex': ticket_candidato.servicio.color_hex,
+                    'numero_meson': current_user.numero_meson,
+                    'es_preferencial': ticket_candidato.es_preferencial
+                }
+                payload = {
+                    'llamado': datos_llamado,
+                    'historial': _get_historial_data()
+                }
+                socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
+                
+                flash(f"Llamando al ticket {ticket_candidato.numero_ticket}", "success")
+                break # ¡Misión cumplida, salimos del bucle!
+            
+            else:
+                # Alguien nos ganó el clic justo en este milisegundo.
+                # No hacemos nada y dejamos que el "while True" repita el proceso
+                # para buscar el SIGUIENTE ticket disponible.
+                continue
 
         return redirect(url_for('panel'))
 

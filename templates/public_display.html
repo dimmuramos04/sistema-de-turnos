@@ -40,6 +40,9 @@
                     {{ llamado.servicio.nombre_modulo }}
                 </div>
                 <div class="call-body">
+                    <div class="vip-badge" style="display: none;">
+                        Atención Preferencial
+                    </div>
                     <div class="ticket-number fade-in" style="--ticket-color: {{ llamado.servicio.color_hex }}">
                         {{ llamado.numero_ticket.split('-')[1] }}
                     </div>
@@ -56,7 +59,10 @@
                 <div class="call-header fade-in">
                     SISTEMA DE TURNOS
                 </div>
-                <div class="call-body">
+                    <div class="call-body">
+                        <div class="vip-badge" style="display: none;">
+                        Atención Preferencial
+                    </div>
                     <div class="ticket-number fade-in" style="--ticket-color: #333">
                         ----
                     </div>
@@ -148,6 +154,27 @@
             moduleNumberEl.innerText = data.numero_meson;
             moduleNumberEl.style.setProperty('--ticket-color', data.color_hex);
 
+            // --- NUEVA LÓGICA VIP ---
+            // Buscamos el cartel DENTRO de este panel específico
+            const vipBadge = panel.querySelector('.vip-badge');
+            
+            if (data.es_preferencial) {
+                // Si es VIP: Mostramos cartel y ponemos números en rojo
+                if(vipBadge) vipBadge.style.display = 'block';
+                ticketNumberEl.style.color = '#dc3545'; // Rojo
+                moduleNumberEl.style.color = '#dc3545';
+            } else {
+                // Si es Normal: Ocultamos cartel y usamos el color del servicio
+                if(vipBadge) vipBadge.style.display = 'none';
+                // Restauramos el color original del servicio
+                ticketNumberEl.style.removeProperty('color'); 
+                moduleNumberEl.style.removeProperty('color');
+                // Aseguramos que se use la variable CSS del color
+                ticketNumberEl.style.setProperty('--ticket-color', data.color_hex);
+                moduleNumberEl.style.setProperty('--ticket-color', data.color_hex);
+            }
+            // ------------------------
+
             // Animación y sonido
             panel.classList.add('is-calling');
             setTimeout(() => panel.classList.remove('is-calling'), 1200);
@@ -166,10 +193,16 @@
             const ticketNumberEl = panel.querySelector('.ticket-number');
             ticketNumberEl.innerText = '----';
             ticketNumberEl.style.setProperty('--ticket-color', '#333');
+            ticketNumberEl.style.removeProperty('color');
 
             const moduleNumberEl = panel.querySelector('.module-number');
             moduleNumberEl.innerText = '-';
             moduleNumberEl.style.setProperty('--ticket-color', '#333');
+            ticketNumberEl.style.removeProperty('color');
+
+            // Ocultar cartel VIP al limpiar
+            const vipBadge = panel.querySelector('.vip-badge');
+            if (vipBadge) vipBadge.style.display = 'none';
         }
 
         // --- LÓGICA PARA ACTUALIZAR EL HISTORIAL ---
