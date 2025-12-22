@@ -95,7 +95,7 @@ class AccionForm(FlaskForm):
 class CrearUsuarioForm(FlaskForm):
     username = StringField('Nombre de Funcionario', validators=[DataRequired()])
     password = PasswordField('Contraseña', validators=[DataRequired()])
-    rol = SelectField('Rol', choices=[('staff', 'Staff (Atención)'), ('registrador', 'Registrador')], validators=[DataRequired()])
+    rol = SelectField('Rol', choices=[('staff', 'Staff (Atención)'), ('registrador', 'Registrador'), ('admin', 'Administrador')], validators=[DataRequired()])
     modulo_asignado = SelectField('Módulo Asignado', coerce=int, validators=[Optional()])
     numero_meson = IntegerField('Número de Mesón (solo para rol staff)', validators=[Optional()])
     submit = SubmitField('Crear Usuario')

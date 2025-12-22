@@ -39,9 +39,12 @@
                         </td>
                         <td class="acciones">
                             <a href="{{ url_for('editar_servicio', service_id=servicio.id) }}" class="btn-action edit">Editar</a>
-                            <form action="{{ url_for('reset_servicio', service_id=servicio.id) }}" method="post" style="display:inline;">
+                            <form action="{{ url_for('reset_servicio', service_id=servicio.id) }}" method="post" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn-action" style="background-color: #17a2b8; border: none; cursor: pointer; color: white;" onclick="return confirm('¿Reiniciar contador a A00?');">Reiniciar</button>
+                                <button type="submit" class="btn-action" style="background-color: #17a2b8; border: none; cursor: pointer; color: white;" 
+                                onclick="return confirm('¿Estás seguro de reiniciar el contador a A00?\n\n⚠️ ¡ADVERTENCIA CRÍTICA!\nEsta acción BORRARÁ permanentemente todos los tickets de este servicio de la base de datos.\n\nSi estos son datos reales, asegúrate de haber descargado el reporte CSV ANTES de aceptar, o perderás la información.\n\n¿Deseas continuar de todos modos?');">
+                                    Reiniciar
+                                </button>
                             </form>
                             <form action="{{ url_for('eliminar_servicio', service_id=servicio.id) }}" method="post" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este servicio? No se podrá eliminar si tiene tickets asociados.');" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
