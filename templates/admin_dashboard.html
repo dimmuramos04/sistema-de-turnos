@@ -4,12 +4,35 @@
 {% block content %}
 {% include '_logged_in_header.html' %}
     <div class="admin-body">
+        <style>
+            .alert { padding: 15px; border-radius: 4px; margin-bottom: 10px; }
+            .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+            .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        </style>
         <div class="admin-nav">
+            <!-- Botón Interruptor -->
+            <form action="{{ url_for('toggle_sistema') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if sistema_abierto %}
+                    <button type="submit" class="btn-danger">🔴 CERRAR SISTEMA (Nadie entra)</button>
+                {% else %}
+                    <button type="submit" class="btn-success">🟢 ABRIR SISTEMA</button>
+                {% endif %}
+            </form>
             <a href="{{ url_for('admin_dashboard') }}" class="nav-item active">Dashboard</a>
             <a href="{{ url_for('gestionar_usuarios') }}" class="nav-item">Gestión de Usuarios</a>
             <a href="{{ url_for('gestionar_servicios') }}" class="nav-item">Gestión de Servicios</a>
         </div>
         <div class="admin-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" style="margin-bottom: 20px;">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
             <div class="toolbar">
                 <a href="{{ url_for('descargar_reporte_tickets') }}" class="btn-secondary">Descargar Reporte (CSV)</a>
             </div>
@@ -31,14 +54,18 @@
                     <h3>Atendidos Hoy</h3>
                     <p>{{ tickets_finalizados_hoy }}</p>
                 </div>
+                <div class="stat-card" style="border-left-color: #ffc107;">
+                    <h3>T. Espera Prom.</h3>
+                    <p>{{ promedio_espera }}</p>
+                </div>
             </div>
 
             <div class="charts-grid">
                 <div class="chart-container">
-                    <canvas id="ticketsPorServicioChart"></canvas>
+                    <canvas id="flujoPorHoraChart"></canvas>
                 </div>
                 <div class="chart-container">
-                    <canvas id="flujoPorHoraChart"></canvas>
+                    <canvas id="ticketsPorServicioChart"></canvas>
                 </div>
             </div>
         </div>

@@ -3,6 +3,11 @@
 {% block body_class %}form-body{% endblock %}
 {% block content %}
 <div class="panel-container">
+    <style>
+        .alert { padding: 15px; border-radius: 4px; margin-bottom: 10px; }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
     <div class="panel-header">
         <h3>Panel de Administración</h3>
         <a href="{{ url_for('logout') }}" class="btn-logout">Cerrar Sesión</a>
@@ -14,6 +19,15 @@
             <a href="{{ url_for('gestionar_servicios') }}" class="nav-item">Gestión de Servicios</a>
         </div>
         <div class="admin-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages" style="margin-bottom: 20px;">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
             <div class="toolbar">
                 <a href="{{ url_for('crear_usuario') }}" class="btn-add">Añadir Nuevo Usuario</a>
             </div>

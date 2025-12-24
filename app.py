@@ -2,7 +2,7 @@
 
 import os
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
+from flask import Flask, config, render_template, request, redirect, url_for, flash, session, Response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +15,7 @@ from wtforms import StringField, PasswordField, SubmitField, SelectField, Intege
 from wtforms.validators import DataRequired, Optional
 from flask_wtf.csrf import CSRFProtect
 from functools import wraps
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask_socketio import SocketIO, join_room
 from flask_migrate import Migrate
 import sentry_sdk
@@ -120,7 +120,38 @@ class ChangePasswordForm(FlaskForm):
     confirm_password = PasswordField('Confirmar Nueva Contraseña', validators=[DataRequired()])
     submit = SubmitField('Cambiar Contraseña')
 
+# Configuración del sistema (por ejemplo, si está abierto o cerrado)
+class ConfigSystem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(50), nullable=False) # 'true' o 'false'
 
+# Función auxiliar para verificar si está abierto
+def sistema_esta_abierto():
+    config = ConfigSystem.query.filter_by(key='sistema_abierto').first()
+    # Si no existe la config, asumimos que está abierto por defecto
+    if not config:
+        return True
+    return config.value == 'true'
+
+
+# --- DECORADORES ---
+def check_sistema_abierto(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Si eres admin, pasas siempre
+        if current_user.is_authenticated and current_user.rol == 'admin':
+            return f(*args, **kwargs)
+        
+        # Si no eres admin, verificamos el interruptor
+        if not sistema_esta_abierto():
+            flash('El sistema está cerrado por el administrador. Vuelva mañana.', 'error')
+            return redirect(url_for('login')) # O a una página de "Cerrado"
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Función auxiliar para obtener datos del historial
 def _get_historial_data():
     """Busca los últimos 4 tickets para el historial y los serializa."""
     historial = Ticket.query.filter(Ticket.estado.in_(['en_atencion', 'finalizado'])) \
@@ -144,6 +175,7 @@ def create_app():
 
     # --- CONFIGURACIÓN DE LA APLICACIÓN ---
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12) # La sesión durará 12 horas
     
     # ¡Importante! Asegurarse de que DEBUG esté desactivado en producción.
     is_production = os.getenv('FLASK_ENV') == 'production'
@@ -169,6 +201,9 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    login_manager.login_view = 'login' # Si @login_required falla, ir aquí
+    login_manager.login_message = "Su sesión ha expirado. Por favor ingrese nuevamente."
+    login_manager.login_message_category = "error"
     csrf.init_app(app)
     # Pasamos el async_mode='eventlet' para producción.
     socketio.init_app(app, async_mode='eventlet', cors_allowed_origins="*")
@@ -193,7 +228,11 @@ def create_app():
         def decorator(f):
             @wraps(f)
             def decorated_function(*args, **kwargs):
-                if not current_user.is_authenticated or current_user.rol != role:
+                if not current_user.is_authenticated:
+                    flash("Su sesión ha expirado. Por favor ingrese nuevamente.", "error")
+                    return redirect(url_for('login'))
+                
+                if current_user.rol != role:
                     flash(f"Acceso denegado. Se requiere el rol de '{role}'.", "error")
                     return redirect(url_for('pantalla_publica'))
                 return f(*args, **kwargs)
@@ -222,6 +261,7 @@ def create_app():
     @app.route('/registro', methods=['GET', 'POST'])
     @login_required
     @role_required('registrador')
+    @check_sistema_abierto
     def registro():
         form = RegistroForm()
         # Llenamos dinámicamente las opciones del menú desplegable
@@ -303,6 +343,7 @@ def create_app():
 
             if usuario and usuario.check_password(password):
                 login_user(usuario)
+                session.permanent = True # Activa la duración de 12 horas configurada arriba
 
                 # --- REGISTRO DE INICIO DE SESIÓN ---
                 app.logger.info(f"Inicio de sesión exitoso: Usuario '{usuario.nombre_funcionario}' (Rol: {usuario.rol})")
@@ -360,6 +401,27 @@ def create_app():
         datos_grafico_lineas = {f"{h:02d}": 0 for h in range(8, 19)} # Horario de 8am a 6pm
         for row in tickets_por_hora_raw:
             datos_grafico_lineas[f"{int(row.hora):02d}"] = row.cantidad
+
+        # --- CÁLCULO DE PROMEDIO DE ESPERA ---
+        # Buscamos tickets atendidos hoy que tengan hora de llamado
+        tickets_atendidos_hoy_data = Ticket.query.filter(
+            func.date(Ticket.hora_registro) == hoy,
+            Ticket.hora_llamado.isnot(None)
+        ).all()
+
+        promedio_espera_str = "0 min"
+        if tickets_atendidos_hoy_data:
+            total_segundos = 0
+            count = 0
+            for t in tickets_atendidos_hoy_data:
+                # Tiempo espera = Hora Llamado - Hora Registro
+                delta = t.hora_llamado - t.hora_registro
+                total_segundos += delta.total_seconds()
+                count += 1
+            
+            if count > 0:
+                promedio_minutos = int((total_segundos / count) / 60)
+                promedio_espera_str = f"{promedio_minutos} min"
         # -----------------------------------------------------------------
     
         return render_template(
@@ -368,8 +430,10 @@ def create_app():
             tickets_en_espera=tickets_en_espera,
             tickets_en_atencion=tickets_en_atencion,
             tickets_finalizados_hoy=tickets_finalizados_hoy,
+            promedio_espera=promedio_espera_str,
             chart_data_dona=chart_data_dona,
-            chart_data_lineas=datos_grafico_lineas
+            chart_data_lineas=datos_grafico_lineas,
+            sistema_abierto=sistema_esta_abierto()
         )
 
     @app.route('/admin/reporte/tickets')
@@ -643,6 +707,7 @@ def create_app():
     @app.route('/panel')
     @login_required
     @role_required('staff')
+    @check_sistema_abierto
     def panel():
         # Busca los tickets en espera para el módulo del funcionario
         tickets_en_espera = Ticket.query.filter_by(
@@ -668,6 +733,7 @@ def create_app():
     @app.route('/llamar-siguiente', methods=['POST'])
     @login_required
     @role_required('staff')
+    @check_sistema_abierto
     def llamar_siguiente():
         # Bucle infinito que se rompe solo cuando logramos tomar un ticket o no hay nadie
         while True:
@@ -741,6 +807,7 @@ def create_app():
     @app.route('/rellamar', methods=['POST'])
     @login_required
     @role_required('staff')
+    @check_sistema_abierto
     def rellamar_ticket():
         ticket_id = request.form['ticket_id']
         ticket_a_rellamar = db.session.get(Ticket, ticket_id)
@@ -770,6 +837,7 @@ def create_app():
     @app.route('/finalizar', methods=['POST'])
     @login_required
     @role_required('staff')
+    @check_sistema_abierto
     def finalizar_atencion():
         ticket_id = request.form['ticket_id']
         ticket_a_finalizar = db.session.get(Ticket, ticket_id)
@@ -831,7 +899,24 @@ def create_app():
                 return redirect(url_for('pantalla_publica'))
 
         return render_template('cambiar_contrasena.html', form=form)
-
+    
+    @app.route('/admin/toggle_sistema', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def toggle_sistema():
+        config = ConfigSystem.query.filter_by(key='sistema_abierto').first()
+        if not config:
+            config = ConfigSystem(key='sistema_abierto', value='true')
+            db.session.add(config)
+    
+        # Cambiar estado (si es true pasa a false, y viceversa)
+        nuevo_estado = 'false' if config.value == 'true' else 'true'
+        config.value = nuevo_estado
+        db.session.commit()
+    
+        estado_msg = "ABIERTO" if nuevo_estado == 'true' else "CERRADO"
+        flash(f'Sistema {estado_msg} exitosamente.', 'success')
+        return redirect(url_for('admin_dashboard'))
     # --- COMANDOS DE LA CLI ---
     # Movemos el comando de seed aquí para que esté asociado a la app.
     @app.cli.command("seed")

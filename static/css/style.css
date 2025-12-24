@@ -270,6 +270,7 @@ body {
 /* -------------------- D. Panel de Administración (/admin) -------------------- */
 .admin-body { padding: 0; display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
 .admin-nav { display: flex; background-color: #e9ecef; border-bottom: 1px solid #ddd; }
+.admin-nav form { display: flex; align-items: center; } /* Centra el botón verticalmente */
 .nav-item {
     padding: 1rem 1.5rem; text-decoration: none; color: #495057; font-weight: 500;
 }
@@ -357,6 +358,19 @@ body {
     background-color: #6c757d; color: var(--blanco-uls); padding: 0.75rem 1.5rem;
     border-radius: 5px; text-decoration: none; font-weight: 500; display: inline-block;
 }
+.btn-success {
+    background-color: #28a745; color: var(--blanco-uls); padding: 0.5rem 1rem;
+    border-radius: 4px; border: none; font-weight: 700; cursor: pointer;
+    margin: 0 1rem; transition: background-color 0.2s;
+}
+.btn-success:hover { background-color: #218838; }
+
+.btn-danger {
+    background-color: var(--rojo-uls); color: var(--blanco-uls); padding: 0.5rem 1rem;
+    border-radius: 4px; border: none; font-weight: 700; cursor: pointer;
+    margin: 0 1rem; transition: background-color 0.2s;
+}
+.btn-danger:hover { background-color: #a81022; }
 /* -------------------- B. Mensajes Flash -------------------- */
 .flash-message {
     padding: 1rem; margin-top: 1.5rem; border-radius: 4px; text-align: center;
