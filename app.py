@@ -35,6 +35,9 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 socketio = SocketIO()
 
+# Definimos la zona horaria globalmente para usarla en los modelos
+zona_horaria_chile = pytz.timezone('America/Santiago')
+
 # --- MODELOS DE LA BASE DE DATOS ---
 # Los modelos pueden definirse aquí sin problemas.
 class Usuario(db.Model, UserMixin):
@@ -75,6 +78,15 @@ class Ticket(db.Model):
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicio.id'), nullable=False)
     servicio = relationship('Servicio')
     numero_meson = db.Column(db.Integer, nullable=True)
+
+    def get_hora_chile(self, fecha):
+        """Convierte una fecha UTC (o naive) a hora de Chile."""
+        if not fecha:
+            return None
+        if fecha.tzinfo is None:
+            # Si es naive, asumimos que YA ES hora de Chile (porque así se guarda en la DB)
+            return zona_horaria_chile.localize(fecha)
+        return fecha.astimezone(zona_horaria_chile)
 
 # --- FORMULARIOS ---
 # Los formularios también pueden definirse aquí.
@@ -221,8 +233,6 @@ def create_app():
         app.logger.setLevel(logging.INFO)
         app.logger.info('Sistema de Turnos iniciado')
 
-    # --- DEFINICIONES DENTRO DEL CONTEXTO DE LA APP ---
-    zona_horaria_chile = pytz.timezone('America/Santiago')
 
     def role_required(role):
         def decorator(f):
@@ -299,7 +309,7 @@ def create_app():
                         rut_cliente=rut_cliente,
                         modulo_solicitado=servicio.nombre_modulo,
                         servicio_id=servicio.id,
-                        hora_registro=datetime.now(zona_horaria_chile),
+                        hora_registro=datetime.now(zona_horaria_chile).replace(tzinfo=None),
                         es_preferencial=form.es_preferencial.data
                     )
                 
@@ -313,7 +323,7 @@ def create_app():
                         'numero_ticket': numero_ticket_str,
                         'modulo_solicitado': servicio.nombre_modulo,
                         'color_hex': servicio.color_hex,
-                        'hora_registro': nuevo_ticket.hora_registro.isoformat()
+                        'hora_registro': nuevo_ticket.get_hora_chile(nuevo_ticket.hora_registro).isoformat()
                     }
                     socketio.emit('nuevo_ticket_registrado', datos_ticket, room=servicio.nombre_modulo)
 
@@ -371,7 +381,7 @@ def create_app():
     @role_required('admin')
     def admin_dashboard():
         # --- CÁLCULO DE ESTADÍSTICAS ---
-        hoy = date.today()
+        hoy = datetime.now(zona_horaria_chile).date()
     
         tickets_hoy = Ticket.query.filter(func.date(Ticket.hora_registro) == hoy).count()
         tickets_en_espera = Ticket.query.filter_by(estado='en_espera').count()
@@ -461,6 +471,10 @@ def create_app():
             # Si un ticket fue atendido, 'usuario' tendrá los datos del funcionario.
             # Si no, será 'None'.
             nombre_funcionario = usuario.nombre_funcionario if usuario else ''
+            
+            h_reg = ticket.get_hora_chile(ticket.hora_registro)
+            h_llam = ticket.get_hora_chile(ticket.hora_llamado)
+            h_fin = ticket.get_hora_chile(ticket.hora_finalizado)
         
             writer.writerow([
                 ticket.id, 
@@ -468,9 +482,9 @@ def create_app():
                 ticket.rut_cliente, 
                 ticket.modulo_solicitado,
                 ticket.estado, 
-                ticket.hora_registro.strftime('%Y-%m-%d %H:%M:%S') if ticket.hora_registro else '',
-                ticket.hora_llamado.strftime('%Y-%m-%d %H:%M:%S') if ticket.hora_llamado else '',
-                ticket.hora_finalizado.strftime('%Y-%m-%d %H:%M:%S') if ticket.hora_finalizado else '',
+                h_reg.strftime('%Y-%m-%d %H:%M:%S') if h_reg else '',
+                h_llam.strftime('%Y-%m-%d %H:%M:%S') if h_llam else '',
+                h_fin.strftime('%Y-%m-%d %H:%M:%S') if h_fin else '',
                 nombre_funcionario,
                 ticket.numero_meson
             ])
@@ -759,7 +773,7 @@ def create_app():
                 Ticket.estado == 'en_espera'
             ).update({
                 'estado': 'en_atencion',
-                'hora_llamado': datetime.now(zona_horaria_chile),
+                'hora_llamado': datetime.now(zona_horaria_chile).replace(tzinfo=None),
                 'atendido_por_id': current_user.id,
                 'numero_meson': current_user.numero_meson
             }, synchronize_session=False)
@@ -846,7 +860,7 @@ def create_app():
         # realmente le pertenezca al funcionario que lo quiere finalizar.
         if ticket_a_finalizar and ticket_a_finalizar.atendido_por_id == current_user.id:
             ticket_a_finalizar.estado = 'finalizado'
-            ticket_a_finalizar.hora_finalizado = datetime.now(zona_horaria_chile)
+            ticket_a_finalizar.hora_finalizado = datetime.now(zona_horaria_chile).replace(tzinfo=None)
             db.session.commit()
             # Emitimos evento para actualizar la pantalla principal
             payload = {

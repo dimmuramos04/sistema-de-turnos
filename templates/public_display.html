@@ -10,7 +10,7 @@
 <script>
     // Oculta el overlay ANTES de renderizar si ya está iniciado
     if (window.localStorage.getItem('pantallaTurnosIniciada')) {
-        document.write('<style>#start-overlay{display:none!important;}</style>');
+        document.write('<style>#start-overlay{display:none;}</style>');
     }
 </script>
     <div id="start-overlay">
@@ -115,24 +115,37 @@
         setInterval(actualizarReloj, 1000);
 
         // --- LÓGICA DE PANTALLA DE BIENVENIDA (sin cambios) ---
-        if (localStorage.getItem('pantallaTurnosIniciada')) {
+        // Definimos la función de desbloqueo para poder reutilizarla si el audio falla después
+        const desbloquearAudio = () => {
             overlay.style.display = 'none';
-        } else {
-            overlay.addEventListener('click', () => {
-                overlay.style.display = 'none';
-                audio.play().catch(e => {});
+            audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
-                localStorage.setItem('pantallaTurnosIniciada', 'true');
-                console.log("Sistema de audio activado por el usuario.");
-            }, { once: true });
+            }).catch(e => {});
+            localStorage.setItem('pantallaTurnosIniciada', 'true');
+            console.log("Sistema de audio activado por el usuario.");
+        };
+
+        // Siempre agregamos el listener, por si el overlay vuelve a aparecer por error de audio
+        overlay.addEventListener('click', desbloquearAudio);
+
+        if (localStorage.getItem('pantallaTurnosIniciada')) {
+            overlay.style.display = 'none';
         }
 
         // --- LÓGICA DE CONEXIÓN EN TIEMPO REAL ---
         var socket = io();
+        var esPrimeraConexion = true;
+
         socket.on('connect', function() {
             console.log('EVENTO: ¡Conexión exitosa al servidor!');
             socket.emit('join', {room: 'pantalla_publica'});
+            
+            if (!esPrimeraConexion) {
+                console.log('Reconexión detectada. Recargando para sincronizar datos...');
+                window.location.reload();
+            }
+            esPrimeraConexion = false;
         });
         socket.on('connect_error', (err) => {
             console.error('EVENTO: ¡Error de conexión!', err);
@@ -179,7 +192,10 @@
             panel.classList.add('is-calling');
             setTimeout(() => panel.classList.remove('is-calling'), 1200);
             if (localStorage.getItem('pantallaTurnosIniciada')) {
-                audio.play().catch(e => console.error("Error al reproducir sonido:", e));
+                audio.play().catch(e => {
+                    console.error("Error al reproducir sonido (bloqueo navegador):", e);
+                    overlay.style.display = 'flex'; // Pedimos interacción nuevamente
+                });
             }
         }
 
@@ -241,7 +257,10 @@
                 existingPanel.classList.add('is-calling');
                 setTimeout(() => existingPanel.classList.remove('is-calling'), 1200);
                  if (localStorage.getItem('pantallaTurnosIniciada')) {
-                    audio.play().catch(e => console.error("Error al reproducir sonido:", e));
+                    audio.play().catch(e => {
+                        console.error("Error al reproducir sonido (bloqueo navegador):", e);
+                        overlay.style.display = 'flex'; // Pedimos interacción nuevamente
+                    });
                 }
             } else {
                 // Si es un nuevo llamado, buscar un panel vacío

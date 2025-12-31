@@ -470,3 +470,103 @@ body {
     min-height: 150px; /* Reducimos un poco la altura del historial */
     max-height: 30vh;
 }
+
+/* ==========================================================================
+   6. RESPONSIVE DESIGN (MOBILE & TABLET)
+   ========================================================================== */
+@media (max-width: 992px) {
+    /* Ajustes para Tablets y Laptops pequeñas */
+    .charts-grid {
+        grid-template-columns: 1fr; /* Gráficos en una sola columna */
+    }
+    .chart-container {
+        height: 300px; /* Un poco más bajos */
+    }
+}
+
+@media (max-width: 768px) {
+    /* Ajustes Generales para Móviles */
+    body {
+        height: auto; /* Permitir scroll natural en vez de forzar el alto de pantalla */
+        min-height: 100vh;
+    }
+
+    /* --- Admin Dashboard --- */
+    .admin-body {
+        display: block; /* Quitar flex para evitar scroll interno complicado en móvil */
+        height: auto;
+    }
+    
+    .admin-nav {
+        flex-direction: column; /* Menú vertical */
+        padding: 1rem;
+    }
+    
+    .admin-nav form {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .admin-nav form button {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .nav-item {
+        width: 100%;
+        text-align: center;
+        padding: 1rem;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .admin-content {
+        padding: 1rem;
+        overflow: visible;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr; /* Tarjetas de estadística una debajo de otra */
+    }
+
+    /* --- Tablas (Usuarios y Servicios) --- */
+    .user-table {
+        display: block;
+        overflow-x: auto; /* Scroll horizontal para tablas si son muy anchas */
+        white-space: nowrap;
+    }
+
+    /* --- Formularios (Registro, Login, etc) --- */
+    .form-container {
+        margin: 1rem; /* Menos margen externo */
+        padding: 1.5rem; /* Menos padding interno */
+        width: auto; /* Ancho automático para no desbordar */
+    }
+    
+    /* Ajuste del encabezado azul dentro del formulario */
+    .main-header-form {
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    }
+
+    /* --- Ajuste del Header de Usuario Logueado (.panel-header) --- */
+    .panel-header {
+        flex-direction: column; /* Apilar verticalmente: Saludo arriba, botones abajo */
+        text-align: center;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .header-actions {
+        width: 100%;
+        flex-direction: column; /* Botones uno debajo del otro */
+        gap: 0.5rem;
+    }
+
+    .header-actions .btn, 
+    .header-actions .btn-secondary, 
+    .header-actions .btn-logout {
+        width: 100%; /* Botones ocupan todo el ancho para ser fáciles de tocar */
+        display: block;
+        box-sizing: border-box;
+        margin: 0;
+    }
+}

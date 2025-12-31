@@ -50,7 +50,7 @@
                 {% for ticket in tickets_en_espera %}
                 <li>
                     <span class="ticket-name">{{ ticket.numero_ticket }}</span>
-                    <span class="ticket-time" data-isodate="{{ ticket.hora_registro.isoformat() }}"></span>
+                    <span class="ticket-time" data-isodate="{{ ticket.get_hora_chile(ticket.hora_registro).isoformat() }}"></span>
                 </li>
                 {% else %}
                 <li class="no-tickets">No hay nadie en espera.</li>
@@ -71,7 +71,8 @@
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
-                hour12: false
+                hour12: false,
+                timeZone: 'America/Santiago'
             });
         }
 
