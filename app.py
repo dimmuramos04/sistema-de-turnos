@@ -976,12 +976,12 @@ def create_app():
     def handle_join(data):
         room = data.get('room')
         if room:
-            # Aquí podrías añadir lógica de validación. Por ejemplo,
-            # que un usuario 'staff' solo pueda unirse a la sala de su módulo.
-            if current_user.is_authenticated and current_user.rol == 'staff':
+            # 1. Permitir que CUALQUIERA (incluido staff) se una a la pantalla pública
+            if room == 'pantalla_publica':
+                join_room(room)
+            # 2. Si es staff intentando unirse a otra sala, verificamos que sea su módulo
+            elif current_user.is_authenticated and current_user.rol == 'staff':
                 if room == current_user.modulo_asignado:
                     join_room(room)
-            elif room == 'pantalla_publica': # Cualquiera puede unirse a la pantalla pública
-                join_room(room)
 
     return app
