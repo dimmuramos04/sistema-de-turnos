@@ -66,7 +66,7 @@ class Servicio(db.Model):
 
 class Ticket(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    numero_ticket = db.Column(db.String(10), nullable=False, unique=True)
+    numero_ticket = db.Column(db.String(10), nullable=False, unique=False)
     rut_cliente = db.Column(db.String(15), nullable=False)
     modulo_solicitado = db.Column(db.String(100), nullable=False)
     estado = db.Column(db.String(20), default='en_espera')
@@ -297,6 +297,8 @@ def create_app():
                     if siguiente_numero > 99:
                         siguiente_numero = 0
                         siguiente_letra = chr(ord(letra_para_ticket) + 1)
+                        if siguiente_letra > 'E':
+                            siguiente_letra = 'A'
                 
                     numero_ticket_str = f"{servicio.prefijo_ticket}-{letra_para_ticket}{numero_para_ticket:02d}"
                 
