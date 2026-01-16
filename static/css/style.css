@@ -147,6 +147,30 @@ body {
     display: block; text-align: center; margin-top: 1.5rem;
     color: var(--azul-uls); text-decoration: none; font-weight: 500;
 }
+/* Estilos para Checkboxes en formularios */
+.form-check-inline {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Espacio entre la cajita y el texto */
+    margin-bottom: 1.5rem;
+    padding: 0.5rem 0;
+}
+
+.form-check-inline input[type="checkbox"] {
+    width: 20px;  /* Tamaño fijo para el checkbox */
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--azul-uls); /* Usa el color de tu marca para el check */
+}
+
+.form-check-inline label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: 600; /* Un poco más negrita para resaltar */
+    color: var(--negro-texto);
+}
+
 /* -------------------- C. Panel del Staff (/panel) -------------------- */
 .panel-container {
     max-width: 1200px; margin: 2rem auto; background: var(--blanco-uls);
@@ -265,6 +289,26 @@ body {
 .btn-finalizar {
     font-size: 1.2rem;
     padding: 1rem;
+}
+
+/* Estilos para información adicional en el Panel de Staff */
+.ticket-rut {
+    color: #555;          /* Gris oscuro para que se lea bien pero no compita con el número */
+    margin-top: -15px;    /* Lo pegamos un poco al número gigante de arriba */
+    margin-bottom: 1rem;  /* Espacio antes de los botones o la siguiente info */
+    font-size: 1.5rem;    /* Tamaño legible */
+    font-weight: 600;
+}
+
+.ticket-registrador {
+    color: #888;          /* Gris más claro para información secundaria */
+    font-size: 0.95rem;   /* Letra pequeña pero legible */
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa; /* Un fondo muy suave para destacarlo sutilmente */
+    border-radius: 4px;
+    display: inline-block; /* Para que el fondo gris se ajuste al texto */
 }
 
 /* -------------------- D. Panel de Administración (/admin) -------------------- */

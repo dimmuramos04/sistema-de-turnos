@@ -4,7 +4,7 @@ import os
 
 from flask import Flask, config, render_template, request, redirect, url_for, flash, session, Response
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, aliased
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -63,6 +63,7 @@ class Servicio(db.Model):
     letra_actual = db.Column(db.String(1), default='A', nullable=False)
     numero_actual = db.Column(db.Integer, default=0)
     color_hex = db.Column(db.String(7), nullable=False, default='#000000')
+    visible_en_pantalla = db.Column(db.Boolean, default=True, nullable=False)
 
 class Ticket(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +75,8 @@ class Ticket(db.Model):
     hora_llamado = db.Column(db.DateTime, nullable=True)
     hora_finalizado = db.Column(db.DateTime, nullable=True)
     atendido_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    registrado_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    registrador = relationship('Usuario', foreign_keys=[registrado_por_id])
     es_preferencial = db.Column(db.Boolean, default=False)
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicio.id'), nullable=False)
     servicio = relationship('Servicio')
@@ -124,6 +127,7 @@ class CrearServicioForm(FlaskForm):
     nombre_modulo = StringField('Nombre del Módulo', validators=[DataRequired()])
     prefijo_ticket = StringField('Prefijo del Ticket (1-3 letras)', validators=[DataRequired()])
     color_hex = StringField('Color (código hexadecimal, ej: #000000)', validators=[DataRequired()])
+    visible_en_pantalla = BooleanField('¿Mostrar en Pantalla Pública?')
     submit = SubmitField('Crear Servicio')
 
 class ChangePasswordForm(FlaskForm):
@@ -312,7 +316,8 @@ def create_app():
                         modulo_solicitado=servicio.nombre_modulo,
                         servicio_id=servicio.id,
                         hora_registro=datetime.now(zona_horaria_chile).replace(tzinfo=None),
-                        es_preferencial=form.es_preferencial.data
+                        es_preferencial=form.es_preferencial.data,
+                        registrado_por_id=current_user.id
                     )
                 
                     db.session.add(nuevo_ticket)
@@ -452,32 +457,36 @@ def create_app():
     @login_required
     @role_required('admin')
     def descargar_reporte_tickets():
-        # 1. Obtenemos todos los tickets de la base de datos
-        tickets = db.session.query(Ticket, Usuario).outerjoin(
-            Usuario, Ticket.atendido_por_id == Usuario.id
+        # Creamos alias para distinguir al Registrador del Atendedor
+        Registrador = aliased(Usuario)
+        Atendedor = aliased(Usuario)
+
+        # Consulta avanzada uniendo la tabla Usuario dos veces
+        tickets_query = db.session.query(Ticket, Registrador, Atendedor).outerjoin(
+            Registrador, Ticket.registrado_por_id == Registrador.id
+        ).outerjoin(
+            Atendedor, Ticket.atendido_por_id == Atendedor.id
         ).order_by(Ticket.hora_registro.asc()).all()
 
-        # 2. Creamos un "archivo" en la memoria para escribir el CSV
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # 3. Escribimos la fila del encabezado
+        # Agregamos la columna 'Registrado Por' al encabezado
         writer.writerow([
             'ID Ticket', 'Numero Ticket', 'RUT Cliente', 'Modulo Solicitado', 'Estado', 
             'Hora Registro', 'Hora Llamado', 'Hora Finalizado', 
-            'Atendido Por', 'Numero Meson'
+            'Registrado Por', 'Atendido Por', 'Numero Meson'
         ])
 
-        # 4. Escribimos los datos de cada ticket
-        for ticket, usuario in tickets:
-            # Si un ticket fue atendido, 'usuario' tendrá los datos del funcionario.
-            # Si no, será 'None'.
-            nombre_funcionario = usuario.nombre_funcionario if usuario else ''
-            
+        for ticket, registrador, atendedor in tickets_query:
+            # Obtenemos los nombres o dejamos string vacío si no existe
+            nombre_registrador = registrador.nombre_funcionario if registrador else 'Sistema/Antiguo'
+            nombre_atendedor = atendedor.nombre_funcionario if atendedor else ''
+        
             h_reg = ticket.get_hora_chile(ticket.hora_registro)
             h_llam = ticket.get_hora_chile(ticket.hora_llamado)
             h_fin = ticket.get_hora_chile(ticket.hora_finalizado)
-        
+    
             writer.writerow([
                 ticket.id, 
                 ticket.numero_ticket, 
@@ -487,18 +496,18 @@ def create_app():
                 h_reg.strftime('%Y-%m-%d %H:%M:%S') if h_reg else '',
                 h_llam.strftime('%Y-%m-%d %H:%M:%S') if h_llam else '',
                 h_fin.strftime('%Y-%m-%d %H:%M:%S') if h_fin else '',
-                nombre_funcionario,
+                nombre_registrador,  # <--- Nuevo dato en el CSV
+                nombre_atendedor,
                 ticket.numero_meson
             ])
 
-        # 5. Preparamos la respuesta para el navegador
         output.seek(0)
         final_csv_string = '\ufeff' + output.getvalue()
 
         return Response(
             final_csv_string.encode('utf-8'),
             mimetype="text/csv",
-            headers={"Content-Disposition": "attachment;filename=reporte_tickets.csv"}
+            headers={"Content-Disposition": "attachment;filename=reporte_tickets_completo.csv"}
         )
 
     @app.route('/admin/crear_usuario', methods=['GET', 'POST'])
@@ -663,7 +672,8 @@ def create_app():
                 nuevo_servicio = Servicio(
                     nombre_modulo=form.nombre_modulo.data,
                     prefijo_ticket=form.prefijo_ticket.data,
-                    color_hex=form.color_hex.data
+                    color_hex=form.color_hex.data,
+                    visible_en_pantalla=form.visible_en_pantalla.data
                 )
                 db.session.add(nuevo_servicio)
                 db.session.commit()
@@ -691,6 +701,7 @@ def create_app():
             servicio_a_editar.nombre_modulo = form.nombre_modulo.data
             servicio_a_editar.prefijo_ticket = form.prefijo_ticket.data
             servicio_a_editar.color_hex = form.color_hex.data
+            servicio_a_editar.visible_en_pantalla = form.visible_en_pantalla.data
         
             db.session.commit()
             flash('Servicio actualizado exitosamente.', 'success')
@@ -807,7 +818,8 @@ def create_app():
                     'llamado': datos_llamado,
                     'historial': _get_historial_data()
                 }
-                socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
+                if ticket_candidato.servicio.visible_en_pantalla:
+                    socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
                 
                 flash(f"Llamando al ticket {ticket_candidato.numero_ticket}", "success")
                 break # ¡Misión cumplida, salimos del bucle!
@@ -843,7 +855,8 @@ def create_app():
                 'historial': _get_historial_data()
             }
             # Reenviamos el evento a la pantalla pública
-            socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
+            if ticket_a_rellamar.servicio.visible_en_pantalla:
+                socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
             flash(f"Se ha vuelto a llamar al ticket {ticket_a_rellamar.numero_ticket}", "info")
         else:
             flash("Error al intentar volver a llamar al ticket.", "error")

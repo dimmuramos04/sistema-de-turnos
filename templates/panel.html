@@ -19,7 +19,13 @@
             {% if ticket_en_atencion %}
                 <h4>Atendiendo a:</h4>
                 <h2 class="ticket-atendido">{{ ticket_en_atencion.numero_ticket }}</h2>
-        
+
+                <h3 class="ticket-rut">RUT: {{ ticket_en_atencion.rut_cliente }}</h3>
+                {% if ticket_en_atencion.registrador %}
+                    <div class="ticket-registrador">
+                        Ticket generado por: <strong>{{ ticket_en_atencion.registrador.nombre_funcionario }}</strong>
+                    </div>
+                {% endif %}
                 <div class="action-buttons">
                     <form action="{{ url_for('rellamar_ticket') }}" method="post">
                         {{ form.hidden_tag() }}

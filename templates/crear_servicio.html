@@ -25,6 +25,12 @@
             {{ form.prefijo_ticket(class='form-control') }}
         </div>
         <div class="form-group">
+            {{ form.visible_en_pantalla(class='form-check-input', style="width: 20px; height: 20px;") }}
+            <label for="visible_en_pantalla" style="margin: 0;">
+                Mostrar llamados en Pantalla Pública
+            </label>
+        </div>
+        <div class="form-group">
             {{ form.color_hex.label }}
             {{ form.color_hex(class='form-control', value='#') }}
         </div>
