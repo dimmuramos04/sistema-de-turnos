@@ -249,6 +249,14 @@
             const llamadoData = data.llamado;
             const historialData = data.historial;
 
+            // --- AQUÍ ESTÁ EL FILTRO DE SEGURIDAD ---
+            // Si el backend dice que no es visible, paramos aquí.
+            // El código de abajo NI SE ENTERA de que llegó un aviso.
+            if (llamadoData.visible === false) {
+                return; 
+            }
+            // ----------------------------------------
+
             // Buscar si el ticket ya está siendo mostrado (para re-llamados)
             let existingPanel = callPanels.find(p => p.dataset.ticketId == llamadoData.id_ticket);
 

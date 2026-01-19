@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tu Turno - ULS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}">
+    <style>
+        /* Estilos específicos para móvil (muy ligeros) */
+        body { background-color: #f4f6f9; min-height: 100vh; display: flex; flex-direction: column; }
+        .mobile-container { padding: 20px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .card { background: white; border-radius: 15px; padding: 30px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .ticket-number { font-size: 4.5rem; font-weight: 800; color: #333; line-height: 1; margin: 10px 0; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; margin-bottom: 15px; }
+        .status-espera { background: #e3f2fd; color: #0d47a1; }
+        .status-atencion { background: #d4edda; color: #155724; animation: parpadeo 1.5s infinite; }
+        .status-finalizado { background: #e2e3e5; color: #383d41; }
+        .info-espera { font-size: 1.2rem; color: #666; margin-top: 10px; }
+        .espera-count { font-weight: bold; color: var(--azul-uls); font-size: 1.4rem; }
+        
+        @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        
+        /* Ocultar elementos si finalizó */
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    
+    <header style="background: var(--azul-uls); padding: 15px; text-align: center;">
+        <img src="{{ url_for('static', filename='images/logo_uls_blanco.png') }}" alt="Logo ULS" style="height: 40px;">
+    </header>
+
+    <div class="mobile-container">
+        
+        <div class="card">
+            <div id="status-badge" class="status-badge {{ 'status-finalizado' if finalizado else 'status-espera' }}">
+                {% if finalizado %} Atendido {% else %} En Espera {% endif %}
+            </div>
+            
+            <p style="margin: 0; color: #888; font-size: 0.9rem;">Tu número es:</p>
+            <div class="ticket-number" style="color: {{ ticket.servicio.color_hex }}">
+                {{ ticket.numero_ticket }}
+            </div>
+            <p style="margin: 0; font-weight: 500;">{{ ticket.modulo_solicitado }}</p>
+        </div>
+
+        {% if not finalizado %}
+        <div id="info-section" class="card">
+            <p class="info-espera">
+                Personas antes de ti:<br>
+                <span id="personas-antes" class="espera-count">{{ espera }}</span>
+            </p>
+            <p style="font-size: 0.85rem; color: #999; margin-top: 10px;">
+                No cierres esta pestaña.<br>Te avisaremos cuando sea tu turno.
+            </p>
+        </div>
+
+        {% set servicios_con_online = ['Matrícula', 'PACE'] %}
+
+        {% if not finalizado and espera > 10 and ticket.servicio.nombre_modulo in servicios_con_online %}
+    
+        <div class="card" style="background-color: #e3f2fd; border-left: 5px solid #003082; text-align: left; margin-top: 15px;">
+            <p style="margin: 0; font-size: 0.95rem; color: #003082;">
+                <strong>¿Prefieres no esperar?</strong><br>
+                Vemos que hay mucha demanda en <strong>{{ ticket.servicio.nombre_modulo }}</strong>. 
+                Recuerda que este trámite también se puede hacer online.
+            </p>
+            <a href="https://admision.userena.cl/" target="_blank" style="display: block; margin-top: 10px; color: #003082; font-weight: bold; text-decoration: none;">
+                Ir a Portal Online &rarr;
+            </a>
+        </div>
+
+    {% endif %}
+
+        <div id="alerta-llamado" class="card" style="display: none; background-color: #d4edda; border: 2px solid #28a745;">
+            <h2 style="color: #155724; margin-top: 0;">¡ES TU TURNO!</h2>
+            <p style="font-size: 1.2rem;">Por favor acércate al:</p>
+            <div id="modulo-destino" style="font-size: 2.5rem; font-weight: bold; color: #155724;">
+                Módulo ?
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <p>Este ticket ya fue atendido.</p>
+            <a href="https://userena.cl" style="color: var(--azul-uls);">Ir al sitio de la ULS</a>
+        </div>
+        {% endif %}
+
+    </div>
+
+    {% if not finalizado %}
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script>
+        // Conexión
+        const socket = io();
+        const miTicketId = {{ ticket.id }};
+        const miServicio = "{{ ticket.servicio.nombre_modulo }}";
+
+        // Elementos DOM
+        const elPersonas = document.getElementById('personas-antes');
+        const elStatus = document.getElementById('status-badge');
+        const sectionInfo = document.getElementById('info-section');
+        const sectionAlerta = document.getElementById('alerta-llamado');
+        const elModuloDestino = document.getElementById('modulo-destino');
+
+        socket.on('connect', () => {
+            console.log("Conectado para seguimiento...");
+            // Nos unimos a la sala 'pantalla_publica' para escuchar los llamados globales
+            socket.emit('join', {room: 'pantalla_publica'});
+        });
+
+        // 1. ESCUCHAR NUEVOS REGISTROS (Para actualizar la fila si fuese necesario)
+        // Nota: En tu sistema actual, que llegue alguien NUEVO no cambia cuántos hay ANTES de mí.
+        // Así que no necesitamos lógica compleja aquí, solo si quisiéramos mostrar "Tiempo estimado".
+
+        // 2. ESCUCHAR LLAMADOS (Aquí está la magia)
+        socket.on('nuevo_llamado', (data) => {
+            const llamado = data.llamado;
+
+            // CASO A: ¡SOY YO!
+            if (llamado.id_ticket == miTicketId) {
+                // 1. Cambio visual fuerte
+                elStatus.textContent = "¡TE ESTÁN LLAMANDO!";
+                elStatus.className = "status-badge status-atencion";
+                
+                sectionInfo.style.display = 'none'; // Ocultar contador
+                sectionAlerta.style.display = 'block'; // Mostrar alerta
+                elModuloDestino.textContent = "Módulo " + llamado.numero_meson;
+
+                // 2. Vibración (funciona en Android)
+                if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+
+                // 3. LA OPTIMIZACIÓN: DESCONECTAR
+                console.log("Es mi turno. Desconectando socket para ahorrar recursos.");
+                socket.disconnect(); 
+            }
+            
+            // CASO B: NO SOY YO, PERO ES DE MI SERVICIO
+            // (Significa que la fila avanzó)
+            else if (llamado.nombre_modulo == miServicio) {
+                
+                // Solo restamos si NO es un re-llamado.
+                // Si es re-llamado, significa que ya lo descontamos antes.
+                if (llamado.es_rellamado === false) {
+                    
+                    let actuales = parseInt(elPersonas.textContent);
+                    if (actuales > 0) {
+                        elPersonas.textContent = actuales - 1;
+                        
+                        // Animación visual
+                        elPersonas.style.color = 'red';
+                        setTimeout(() => elPersonas.style.color = '', 300);
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

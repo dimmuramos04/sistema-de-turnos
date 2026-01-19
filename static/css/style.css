@@ -171,6 +171,102 @@ body {
     color: var(--negro-texto);
 }
 
+/* --- ESTILOS PARA VISTA DE ÉXITO (QR) --- */
+
+.success-view {
+    text-align: center;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.success-title {
+    color: #28a745; /* Verde éxito estándar */
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+}
+
+.ticket-display-large {
+    font-size: 5rem;
+    font-weight: 800;
+    color: #333;
+    line-height: 1;
+    margin: 10px 0;
+}
+
+.ticket-module-name {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.qr-wrapper {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    display: block;
+    margin: 0 auto 2rem auto;
+    width: fit-content;
+    border: 1px solid #ddd;
+}
+
+.qr-image {
+    width: 200px;
+    height: 200px;
+    display: block;
+    margin: 0 auto;
+}
+
+.qr-instructions {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 0;
+}
+
+.btn-new-record {
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 2rem auto; 
+    text-align: center;
+}
+
+/* --- ESTILOS LIMPIOS PARA EL CHECKBOX (Reemplaza el estilo inline) --- */
+
+.form-check-inline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    padding: 10px;
+    background-color: rgba(207, 20, 43, 0.05); /* Fondo rojo muy suave */
+    border-radius: 5px;
+    border-left: 4px solid var(--rojo-alerta);
+}
+
+.form-check-inline input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: var(--rojo-alerta);
+}
+
+.label-preferencial {
+    margin: 0;
+    font-weight: bold;
+    color: var(--rojo-alerta); /* #CF142B */
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+/* Animación suave de entrada */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* -------------------- C. Panel del Staff (/panel) -------------------- */
 .panel-container {
     max-width: 1200px; margin: 2rem auto; background: var(--blanco-uls);
@@ -612,5 +708,28 @@ body {
         display: block;
         box-sizing: border-box;
         margin: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Achicamos el número gigante en celulares */
+    .ticket-display-large {
+        font-size: 3.5rem; /* Antes era 5rem */
+    }
+
+    /* Achicamos un poco el título */
+    .success-title {
+        font-size: 1.5rem;
+    }
+
+    /* Ajustamos el QR para pantallas muy angostas */
+    .qr-image {
+        width: 150px;
+        height: 150px;
+    }
+    
+    /* Aseguramos que el botón no toque los bordes de la pantalla */
+    .btn-new-record {
+        width: 90%; /* Ocupa casi todo el ancho */
     }
 }

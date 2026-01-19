@@ -24,6 +24,8 @@ import logging
 import io
 import csv
 import pytz
+import qrcode
+import base64
 from dotenv import load_dotenv
 
 # --- INICIALIZACIÓN DE EXTENSIONES (SIN APP) ---
@@ -334,8 +336,21 @@ def create_app():
                     }
                     socketio.emit('nuevo_ticket_registrado', datos_ticket, room=servicio.nombre_modulo)
 
+                    # --- 🔴 NUEVO BLOQUE: GENERACIÓN DE QR ---
+                    # 1. Creamos el link (asegúrate de haber creado la ruta 'estado_ticket_movil' en app.py)
+                    url_destino = url_for('estado_ticket_movil', ticket_id=nuevo_ticket.id, _external=True)
+                    
+                    # 2. Generamos la imagen en memoria
+                    img = qrcode.make(url_destino)
+                    buffer = io.BytesIO()
+                    img.save(buffer, format="PNG")
+                    qr_b64 = base64.b64encode(buffer.getvalue()).decode()
+
                     flash(f"¡Registro Exitoso! Número Asignado: {numero_ticket_str}", "success")
-                    return redirect(url_for('registro'))
+                    return render_template('registro.html', 
+                                         form=form, 
+                                         ticket_exito=nuevo_ticket, # Pasamos el ticket
+                                         qr_code=qr_b64)            # Pasamos el QR
                 
                 except IntegrityError:
                     # ¡CHOQUE DETECTADO!
@@ -350,6 +365,28 @@ def create_app():
         return render_template('registro.html', form=form)
 
 
+    # En app.py
+
+    @app.route('/seguimiento/<int:ticket_id>')
+    def estado_ticket_movil(ticket_id):
+        ticket = db.session.get(Ticket, ticket_id)
+
+        if not ticket:
+            return "Ticket no encontrado", 404
+        # Lógica de optimización:
+        # Si el ticket ya finalizó, mostramos una vista estática (sin sockets)
+        if ticket.estado == 'finalizado':
+            return render_template('mobile_view.html', ticket=ticket, espera=0, finalizado=True)
+
+        # Si está vivo, calculamos cuántos hay antes que él en SU servicio
+        tickets_antes = Ticket.query.filter(
+            Ticket.servicio_id == ticket.servicio_id,
+            Ticket.estado == 'en_espera',
+            Ticket.id < ticket.id  # IDs menores significan que llegaron antes
+        ).count()
+
+        return render_template('mobile_view.html', ticket=ticket, espera=tickets_antes, finalizado=False)
+    
     @app.route('/login', methods=['GET', 'POST'])
     def login():
         form = LoginForm()
@@ -812,14 +849,16 @@ def create_app():
                     'numero_ticket': ticket_candidato.numero_ticket,
                     'color_hex': ticket_candidato.servicio.color_hex,
                     'numero_meson': current_user.numero_meson,
-                    'es_preferencial': ticket_candidato.es_preferencial
+                    'es_preferencial': ticket_candidato.es_preferencial,
+                    'visible': ticket_candidato.servicio.visible_en_pantalla,
+                    'es_rellamado': False
                 }
                 payload = {
                     'llamado': datos_llamado,
                     'historial': _get_historial_data()
                 }
-                if ticket_candidato.servicio.visible_en_pantalla:
-                    socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
+                
+                socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
                 
                 flash(f"Llamando al ticket {ticket_candidato.numero_ticket}", "success")
                 break # ¡Misión cumplida, salimos del bucle!
@@ -848,15 +887,19 @@ def create_app():
                 'nombre_modulo': ticket_a_rellamar.servicio.nombre_modulo,
                 'numero_ticket': ticket_a_rellamar.numero_ticket,
                 'color_hex': ticket_a_rellamar.servicio.color_hex,
-                'numero_meson': ticket_a_rellamar.numero_meson
+                'numero_meson': ticket_a_rellamar.numero_meson,
+                'es_preferencial': ticket_a_rellamar.es_preferencial,
+                'visible': ticket_a_rellamar.servicio.visible_en_pantalla,
+                'es_rellamado': True
+
             }
             payload = {
                 'llamado': datos_llamado,
                 'historial': _get_historial_data()
             }
             # Reenviamos el evento a la pantalla pública
-            if ticket_a_rellamar.servicio.visible_en_pantalla:
-                socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
+            
+            socketio.emit('nuevo_llamado', payload, room='pantalla_publica')
             flash(f"Se ha vuelto a llamar al ticket {ticket_a_rellamar.numero_ticket}", "info")
         else:
             flash("Error al intentar volver a llamar al ticket.", "error")

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Registro de Ticket{% endblock %}
 {% block body_class %}form-body{% endblock %}
+
 {% block content %}
 {% include '_logged_in_header.html' %}
 
@@ -8,31 +9,64 @@
     <header class="main-header-form">
         <img src="{{ url_for('static', filename='images/logo_uls_blanco.png') }}" alt="Logo ULS" class="logo">
     </header>
-    <h2>Registro de Nuevo Ticket</h2>
-    <form method="post" novalidate>
-        {{ form.hidden_tag() }} <div class="form-group">
-            {{ form.rut.label }}
-            {{ form.rut(class='form-control') }}
-        </div>
-        <div class="form-group">
-            {{ form.servicio.label }}
-            {{ form.servicio(class='form-control') }}
-        </div>
-        <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
-            {{ form.es_preferencial(class='form-check-input', style="width: 20px; height: 20px;") }}
-            <label for="es_preferencial" style="margin: 0; font-weight: bold; color: #CF142B;">
-                ATENCIÓN PREFERENCIAL (3ra edad, Embarazadas, Discapacidad)
-            </label>
-        </div>
-        {{ form.submit(class='btn-submit') }}
-    </form>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="flash-message {{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    {% if ticket_exito %}
+    
+        <div class="success-view">
+            <h2 class="success-title">¡Ticket Creado!</h2>
+            
+            <div class="ticket-display-large">
+                {{ ticket_exito.numero_ticket }}
+            </div>
+            
+            <p class="ticket-module-name">
+                {{ ticket_exito.modulo_solicitado }}
+            </p>
+
+            <div class="qr-wrapper">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Seguimiento" class="qr-image">
+                <p class="qr-instructions">Escanear para seguimiento en vivo</p>
+            </div>
+
+            <a href="{{ url_for('registro') }}" class="btn-submit btn-new-record">
+                Nuevo Registro
+            </a>
+        </div>
+
+    {% else %}
+
+        <h2>Registro de Nuevo Ticket</h2>
+        <form method="post" novalidate>
+            {{ form.hidden_tag() }} 
+            
+            <div class="form-group">
+                {{ form.rut.label }}
+                {{ form.rut(class='form-control') }}
+            </div>
+            
+            <div class="form-group">
+                {{ form.servicio.label }}
+                {{ form.servicio(class='form-control') }}
+            </div>
+            
+            <div class="form-check-inline">
+                {{ form.es_preferencial(class='form-check-input') }}
+                <label for="es_preferencial" class="label-preferencial">
+                    ATENCIÓN PREFERENCIAL (3ra edad, Embarazadas, Discapacidad)
+                </label>
+            </div>
+
+            {{ form.submit(class='btn-submit') }}
+        </form>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+    {% endif %}
     </div>
 {% endblock %}
