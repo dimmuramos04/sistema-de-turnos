@@ -77,8 +77,8 @@ class Ticket(db.Model):
     hora_llamado = db.Column(db.DateTime, nullable=True)
     hora_finalizado = db.Column(db.DateTime, nullable=True)
     atendido_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-    #registrado_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-    #registrador = relationship('Usuario', foreign_keys=[registrado_por_id])
+    registrado_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    registrador = relationship('Usuario', foreign_keys=[registrado_por_id])
     es_preferencial = db.Column(db.Boolean, default=False)
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicio.id'), nullable=False)
     servicio = relationship('Servicio')
@@ -319,7 +319,7 @@ def create_app():
                         servicio_id=servicio.id,
                         hora_registro=datetime.now(zona_horaria_chile).replace(tzinfo=None),
                         es_preferencial=form.es_preferencial.data,
-                        #registrado_por_id=current_user.id
+                        registrado_por_id=current_user.id
                     )
                 
                     db.session.add(nuevo_ticket)
@@ -346,7 +346,7 @@ def create_app():
                     img.save(buffer, format="PNG")
                     qr_b64 = base64.b64encode(buffer.getvalue()).decode()
 
-                    flash(f"¡Registro Exitoso! Número Asignado: {numero_ticket_str}", "success")
+                    #flash(f"¡Registro Exitoso! Número Asignado: {numero_ticket_str}", "success")
                     return render_template('registro.html', 
                                          form=form, 
                                          ticket_exito=nuevo_ticket, # Pasamos el ticket
