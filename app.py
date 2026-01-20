@@ -78,7 +78,7 @@ class Ticket(db.Model):
     hora_finalizado = db.Column(db.DateTime, nullable=True)
     atendido_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     #registrado_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-    registrador = relationship('Usuario', foreign_keys=[registrado_por_id])
+    #registrador = relationship('Usuario', foreign_keys=[registrado_por_id])
     es_preferencial = db.Column(db.Boolean, default=False)
     servicio_id = db.Column(db.Integer, db.ForeignKey('servicio.id'), nullable=False)
     servicio = relationship('Servicio')
